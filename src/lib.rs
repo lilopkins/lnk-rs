@@ -15,10 +15,6 @@
 //! ShellLink::new_simple("C:\\Windows\\System32\\notepad.exe");
 //! ```
 
-#[macro_use]
-extern crate bitflags;
-extern crate byteorder;
-
 use std::io::{prelude::*, BufReader, BufWriter};
 use std::fs::File;
 

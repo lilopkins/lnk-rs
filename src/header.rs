@@ -1,3 +1,4 @@
+use bitflags::bitflags;
 use byteorder::{ByteOrder, LE};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
