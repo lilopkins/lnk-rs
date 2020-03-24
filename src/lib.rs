@@ -16,6 +16,8 @@
 //! ```
 
 use byteorder::{ByteOrder, LE};
+#[allow(unused)]
+use log::{trace, debug, info, warn, error};
 
 use std::io::{prelude::*, BufReader, BufWriter};
 use std::fs::File;
@@ -83,12 +85,15 @@ impl ShellLink {
 
     /// Open and parse a shell link
     pub fn open<P: AsRef<std::path::Path>>(path: P) -> std::io::Result<Self> {
+        debug!("Opening {:?}", path.as_ref());
         let mut r = BufReader::new(File::open(path)?);
         let mut data = vec![];
+        trace!("Reading file.");
         r.read_to_end(&mut data)?;
 
         let mut shell_link_header = header::ShellLinkHeader::new();
         shell_link_header.from_data(&data[0..0x4c]);
+        debug!("Shell header: {:#?}", shell_link_header);
 
         let mut cursor = 0x4c;
 
