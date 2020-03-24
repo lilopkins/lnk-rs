@@ -52,6 +52,7 @@ pub struct LinkInfo {
 impl Default for LinkInfo {
     fn default() -> Self {
         Self {
+            size: 0,
             link_info_flags: LinkInfoFlags::empty(),
             volume_id: None,
             local_base_path: None,

@@ -15,6 +15,8 @@
 //! ShellLink::new_simple(r"C:\Windows\System32\notepad.exe");
 //! ```
 
+use byteorder::{ByteOrder, LE};
+
 use std::io::{prelude::*, BufReader, BufWriter};
 use std::fs::File;
 
@@ -27,26 +29,24 @@ pub use linktarget::{};
 mod linkinfo;
 pub use linkinfo::{};
 
-}
+mod stringdata;
+pub use stringdata::{};
 
-#[derive(Clone, Copy, Debug)]
-struct StringData {
-
-}
-
-#[derive(Clone, Copy, Debug)]
-struct ExtraData {
-
-}
+mod extradata;
+pub use extradata::{};
 
 /// A shell link
 #[derive(Clone, Debug)]
 pub struct ShellLink {
     shell_link_header: header::ShellLinkHeader,
     linktarget_id_list: Option<linktarget::LinkTargetIdList>,
-    string_data: Option<StringData>,
-    extra_data: Vec<ExtraData>,
     link_info: Option<linkinfo::LinkInfo>,
+    name_string: Option<String>,
+    relative_path: Option<String>,
+    working_dir: Option<String>,
+    command_line_arguments: Option<String>,
+    icon_location: Option<String>,
+    extra_data: Vec<extradata::ExtraData>,
 }
 
 impl ShellLink {
@@ -62,7 +62,11 @@ impl ShellLink {
             shell_link_header: header::ShellLinkHeader::new(),
             linktarget_id_list: None,
             link_info: None,
-            string_data: None,
+            name_string: None,
+            relative_path: None,
+            working_dir: None,
+            command_line_arguments: None,
+            icon_location: None,
             extra_data: vec![],
         }
     }
@@ -106,12 +110,75 @@ impl ShellLink {
             link_info = Some(info);
         }
 
+        let mut name_string = None;
+        let mut relative_path = None;
+        let mut working_dir = None;
+        let mut command_line_arguments = None;
+        let mut icon_location = None;
+
+        if shell_link_header.link_flags & LinkFlags::HAS_NAME
+            == LinkFlags::HAS_NAME {
+
+            let (len, data) = stringdata::parse_string(&data[cursor..]);
+            name_string = Some(data);
+            cursor += len as usize;
+        }
+
+        if shell_link_header.link_flags & LinkFlags::HAS_RELATIVE_PATH
+            == LinkFlags::HAS_RELATIVE_PATH {
+
+            let (len, data) = stringdata::parse_string(&data[cursor..]);
+            relative_path = Some(data);
+            cursor += len as usize;
+        }
+
+        if shell_link_header.link_flags & LinkFlags::HAS_WORKING_DIR
+            == LinkFlags::HAS_WORKING_DIR {
+
+            let (len, data) = stringdata::parse_string(&data[cursor..]);
+            working_dir = Some(data);
+            cursor += len as usize;
+        }
+
+        if shell_link_header.link_flags & LinkFlags::HAS_ARGUMENTS
+            == LinkFlags::HAS_ARGUMENTS {
+
+            let (len, data) = stringdata::parse_string(&data[cursor..]);
+            command_line_arguments = Some(data);
+            cursor += len as usize;
+        }
+
+        if shell_link_header.link_flags & LinkFlags::HAS_ICON_LOCATION
+            == LinkFlags::HAS_ICON_LOCATION {
+
+            let (len, data) = stringdata::parse_string(&data[cursor..]);
+            icon_location = Some(data);
+            cursor += len as usize;
+        }
+
+        let mut extra_data = Vec::new();
+
+        loop {
+            let query = LE::read_u32(&data[cursor..]);
+            if query < 0x04 {
+                break;
+            }
+            extra_data.push(extradata::ExtraData::from(&data[cursor..]));
+            cursor += query as usize;
+        }
+
+        let _remaining_data = &data[cursor..];
+
         Ok(Self {
             shell_link_header,
             linktarget_id_list,
             link_info,
-            string_data: None,
-            extra_data: vec![],
+            name_string,
+            relative_path,
+            working_dir,
+            command_line_arguments,
+            icon_location,
+            extra_data,
         })
     }
 }
