@@ -13,28 +13,44 @@ pub struct LinkTargetIdList {
     id_list: Vec<ItemID>,
 }
 
-impl LinkTargetIdList {
-
-    pub fn new() -> Self {
+impl Default for LinkTargetIdList {
+    fn default() -> Self {
         Self {
             size: 0,
             id_list: vec![],
         }
     }
+}
 
+impl From<&[u8]> for LinkTargetIdList {
     /// Read data into this struct from a `[u8]`.
-    pub fn from_data(&mut self, data: &[u8]) {
-        self.size = LE::read_u16(&data[0..]);
-        let mut inner_data = &data[2..(self.size as usize)];
+    fn from(data: &[u8]) -> Self {
+        let mut id_list = Self::default();
+        id_list.size = LE::read_u16(&data[0..]);
+        let mut inner_data = &data[2..(id_list.size as usize)];
         while LE::read_u16(inner_data) != 0 {
             // Read an ItemID
-            let size = LE::read_u16(inner_data);
-            self.id_list.push(ItemID {
-                size: size,
-                data: Vec::from(&inner_data[2..(size as usize)]),
-            });
+            let id = ItemID::from(inner_data);
+            let size = id.size;
+            id_list.id_list.push(id);
             inner_data = &inner_data[(size as usize)..];
         }
+        id_list
+    }
+}
+
+impl Into<Vec<u8>> for LinkTargetIdList {
+    fn into(self) -> Vec<u8> {
+        let mut data = Vec::new();
+
+        let size = 2u16;
+        LE::write_u16(&mut data[0..2], size);
+        for id in self.id_list {
+            let mut other_data = id.into();
+            data.append(&mut other_data);
+        }
+        
+        data
     }
 }
 
@@ -46,4 +62,38 @@ pub struct ItemID {
     size: u16,
     /// The shell data source-defined data that specifies an item.
     data: Vec<u8>,
+}
+
+impl Default for ItemID {
+    fn default() -> Self {
+        Self {
+            size: 0,
+            data: Vec::new(),
+        }
+    }
+}
+
+impl From<&[u8]> for ItemID {
+    fn from(data: &[u8]) -> Self {
+        let mut id = Self::default();
+
+        id.size = LE::read_u16(data);
+        id.data = Vec::from(&data[2..(id.size as usize)]);
+
+        id
+    }
+}
+
+impl Into<Vec<u8>> for ItemID {
+    fn into(self) -> Vec<u8> {
+        let mut data = Vec::new();
+
+        assert_eq!(self.data.len() as u16 + 2, self.size);
+
+        LE::write_u16(&mut data, self.size);
+        let mut other_data = self.data.clone();
+        data.append(&mut other_data);
+
+        data
+    }
 }

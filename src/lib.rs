@@ -90,8 +90,7 @@ impl ShellLink {
         if shell_link_header.link_flags & LinkFlags::HAS_LINK_TARGET_ID_LIST
             == LinkFlags::HAS_LINK_TARGET_ID_LIST {
 
-            let mut list = linktarget::LinkTargetIdList::new();
-            list.from_data(&data[0x4c..]);
+            let list = linktarget::LinkTargetIdList::from(&data[0x4c..]);
             linktarget_id_list = Some(list);
         }
 
