@@ -6,7 +6,7 @@ use byteorder::{ByteOrder, LE};
 #[derive(Clone, Debug)]
 pub struct LinkTargetIdList {
     /// The size, in bytes, of the IDList field.
-    size: u16,
+    pub size: u16,
     /// A stored IDList structure (section 2.2.1), which contains the item ID list. An IDList
     /// structure conforms to the following ABNF [RFC5234]:
     ///   `IDLIST = *ITEMID TERMINALID`

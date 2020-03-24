@@ -12,7 +12,7 @@
 //! ```rust
 //! use lnk::ShellLink;
 //! // ...
-//! ShellLink::new_simple("C:\\Windows\\System32\\notepad.exe");
+//! ShellLink::new_simple(r"C:\Windows\System32\notepad.exe");
 //! ```
 
 use std::io::{prelude::*, BufReader, BufWriter};
@@ -24,8 +24,8 @@ pub use header::{LinkFlags, FileAttributeFlags, HotKeyFlags, HotKeyFlagsLowByte,
 mod linktarget;
 pub use linktarget::{};
 
-#[derive(Clone, Copy, Debug)]
-struct LinkInfo {
+mod linkinfo;
+pub use linkinfo::{};
 
 }
 
@@ -44,9 +44,9 @@ struct ExtraData {
 pub struct ShellLink {
     shell_link_header: header::ShellLinkHeader,
     linktarget_id_list: Option<linktarget::LinkTargetIdList>,
-    link_info: Option<LinkInfo>,
     string_data: Option<StringData>,
     extra_data: Vec<ExtraData>,
+    link_info: Option<linkinfo::LinkInfo>,
 }
 
 impl ShellLink {
@@ -86,11 +86,14 @@ impl ShellLink {
         let mut shell_link_header = header::ShellLinkHeader::new();
         shell_link_header.from_data(&data[0..0x4c]);
 
+        let mut cursor = 0x4c;
+
         let mut linktarget_id_list = None;
         if shell_link_header.link_flags & LinkFlags::HAS_LINK_TARGET_ID_LIST
             == LinkFlags::HAS_LINK_TARGET_ID_LIST {
 
-            let list = linktarget::LinkTargetIdList::from(&data[0x4c..]);
+            let list = linktarget::LinkTargetIdList::from(&data[cursor..]);
+            cursor += list.size as usize;
             linktarget_id_list = Some(list);
         }
 
@@ -98,7 +101,9 @@ impl ShellLink {
         if shell_link_header.link_flags & LinkFlags::HAS_LINK_INFO
             == LinkFlags::HAS_LINK_INFO {
 
-            link_info = Some(LinkInfo {});
+            let info = linkinfo::LinkInfo::from(&data[cursor..]);
+            cursor += info.size as usize;
+            link_info = Some(info);
         }
 
         Ok(Self {
