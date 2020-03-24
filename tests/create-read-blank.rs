@@ -1,6 +1,6 @@
 use std::fs;
 
-const TEST_FILE_NAME: &'static str = "test.lnk";
+const TEST_FILE_NAME: &'static str = "temp.lnk";
 
 #[test]
 fn create_read_blank() {
