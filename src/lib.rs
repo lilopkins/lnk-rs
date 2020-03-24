@@ -10,7 +10,9 @@
 //! ## Example
 //! A simple example appears as follows:
 //! ```rust
-//! ShellLink::new_simple()
+//! use lnk::ShellLink;
+//! // ...
+//! ShellLink::new_simple("C:\\Windows\\System32\\notepad.exe");
 //! ```
 
 #[macro_use]
@@ -54,7 +56,7 @@ pub struct ShellLink {
 impl ShellLink {
 
     /// Create a new ShellLink pointing to a location, with otherwise default settings.
-    pub fn new_simple(_to: String) -> Self {
+    pub fn new_simple<S: Into<String>>(_to: S) -> Self {
         unimplemented!()
     }
 
@@ -111,14 +113,5 @@ impl ShellLink {
             string_data: None,
             extra_data: vec![],
         })
-    }
-}
-
-#[allow(missing_docs)]
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
     }
 }
