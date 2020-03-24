@@ -111,7 +111,9 @@ impl ShellLink {
         if shell_link_header.link_flags & LinkFlags::HAS_LINK_INFO
             == LinkFlags::HAS_LINK_INFO {
 
+            debug!("LinkInfo is marked as present. Parsing now.");
             let info = linkinfo::LinkInfo::from(&data[cursor..]);
+            debug!("{:?}", info);
             cursor += info.size as usize;
             link_info = Some(info);
         }
