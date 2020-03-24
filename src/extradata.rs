@@ -17,7 +17,7 @@ pub enum ExtraData {
 
 impl From<&[u8]> for ExtraData {
     fn from(data: &[u8]) -> Self {
-        let size = LE::read_u32(data) as usize;
+        let _size = LE::read_u32(data) as usize;
         let sig = LE::read_u32(&data[4..]);
         println!("Signature {:x}", sig);
         let data = &data[8..];
