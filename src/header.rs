@@ -3,12 +3,13 @@ use byteorder::{ByteOrder, LE};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+const CLSID: u128 = 0x460000000000_00c0_0000_0000_00021401;
+
+/// A ShellLinkHeader structure (section 2.1), which contains identification
+/// information, timestamps, and flags that specify the presence of optional
+/// structures.
 #[derive(Clone, Copy, Debug)]
 pub struct ShellLinkHeader {
-    /// The size, in bytes, of this structure. This value MUST be 0x0000004C.
-    header_size: u32,
-    /// A class identifier (CLSID). This value MUST be 00021401-0000-0000-C000-000000000046.
-    link_clsid: u128,
     /// A LinkFlags structure (section 2.1.1) that specifies information about the shell link and
     /// the presence of optional portions of the structure.
     pub link_flags: LinkFlags,
@@ -40,22 +41,13 @@ pub struct ShellLinkHeader {
     /// application referenced by the shortcut key. This value is assigned to the application after
     /// it is launched, so that pressing the key activates that application.
     pub hotkey: HotKeyFlags,
-    /// A value that MUST be zero.
-    reserved1: u16,
-    /// A value that MUST be zero.
-    reserved2: u32,
-    /// A value that MUST be zero.
-    reserved3: u32,
 }
 
-impl ShellLinkHeader {
+impl Default for ShellLinkHeader {
 
     /// Create a new, blank, ShellLinkHeader
-    pub fn new() -> Self {
+    fn default() -> Self {
         Self {
-            header_size: 0x4c,
-            // {00021401-0000-0000-C000-000000000046}
-            link_clsid: 0x460000000000_00c0_0000_0000_00021401,
             link_flags: LinkFlags::empty(),
             file_attributes: FileAttributeFlags::FILE_ATTRIBUTE_NORMAL,
             creation_time: 0,
@@ -65,17 +57,16 @@ impl ShellLinkHeader {
             icon_index: 0,
             show_command: ShowCommand::ShowNormal,
             hotkey: HotKeyFlags::new(HotKeyFlagsLowByte::NoKeyAssigned, HotKeyFlagsHighByte::NO_MODIFIER),
-            reserved1: 0,
-            reserved2: 0,
-            reserved3: 0,
         }
     }
+}
 
+impl Into<[u8; 0x4c]> for ShellLinkHeader {
     /// Write the data in this header to a `[u8]` for writing to the output file.
-    pub fn to_data(&self) -> [u8; 0x4c] {
+    fn into(self) -> [u8; 0x4c] {
         let mut header_data = [0u8; 0x4c];
-        LE::write_u32(&mut header_data[0..], self.header_size);
-        LE::write_u128(&mut header_data[4..], self.link_clsid);
+        LE::write_u32(&mut header_data[0..], 0x4c);
+        LE::write_u128(&mut header_data[4..], CLSID);
         LE::write_u32(&mut header_data[20..], self.link_flags.bits);
         LE::write_u32(&mut header_data[24..], self.file_attributes.bits);
         LE::write_u64(&mut header_data[28..], self.creation_time);
@@ -85,28 +76,31 @@ impl ShellLinkHeader {
         LE::write_i32(&mut header_data[56..], self.icon_index);
         LE::write_u32(&mut header_data[60..], self.show_command as u32);
         LE::write_u16(&mut header_data[64..], self.hotkey.to_flags_u16());
-        LE::write_u16(&mut header_data[66..], self.reserved1);
-        LE::write_u32(&mut header_data[68..], self.reserved2);
-        LE::write_u32(&mut header_data[72..], self.reserved3);
+        LE::write_u16(&mut header_data[66..], 0);
+        LE::write_u32(&mut header_data[68..], 0);
+        LE::write_u32(&mut header_data[72..], 0);
         header_data
     }
+}
 
+impl From<&[u8]> for ShellLinkHeader {
     /// Read data into this struct from a `[u8]`.
-    pub fn from_data(&mut self, data: &[u8]) {
-        self.header_size = LE::read_u32(&data[0..]);
-        self.link_clsid = LE::read_u128(&data[4..]);
-        self.link_flags = LinkFlags::from_bits_truncate(LE::read_u32(&data[20..]));
-        self.file_attributes = FileAttributeFlags::from_bits_truncate(LE::read_u32(&data[24..]));
-        self.creation_time = LE::read_u64(&data[28..]);
-        self.access_time = LE::read_u64(&data[36..]);
-        self.write_time = LE::read_u64(&data[44..]);
-        self.file_size = LE::read_u32(&data[52..]);
-        self.icon_index = LE::read_i32(&data[56..]);
-        self.show_command = FromPrimitive::from_u32(LE::read_u32(&data[60..])).unwrap();
-        self.hotkey = HotKeyFlags::from_bits(LE::read_u16(&data[64..]));
-        self.reserved1 = LE::read_u16(&data[66..]);
-        self.reserved2 = LE::read_u32(&data[68..]);
-        self.reserved3 = LE::read_u32(&data[72..]);
+    fn from(data: &[u8]) -> Self {
+        let mut header = Self::default();
+
+        assert_eq!(LE::read_u32(&data[0..]), 0x4c);
+        assert_eq!(LE::read_u128(&data[4..]), CLSID);
+        header.link_flags = LinkFlags::from_bits_truncate(super::read_enum_u32(&data[20..]));
+        header.file_attributes = FileAttributeFlags::from_bits_truncate(super::read_enum_u32(&data[24..]));
+        header.creation_time = LE::read_u64(&data[28..]);
+        header.access_time = LE::read_u64(&data[36..]);
+        header.write_time = LE::read_u64(&data[44..]);
+        header.file_size = LE::read_u32(&data[52..]);
+        header.icon_index = LE::read_i32(&data[56..]);
+        header.show_command = FromPrimitive::from_u32(LE::read_u32(&data[60..])).unwrap();
+        header.hotkey = HotKeyFlags::from_bits(super::read_enum_u16(&data[64..]));
+
+        header
     }
 }
 
@@ -304,7 +298,8 @@ bitflags! {
     }
 }
 
-#[derive(Clone, Copy, Debug, FromPrimitive)]
+/// The expected window state of an application launched by the link.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive)]
 pub enum ShowCommand {
     /// The application is open and its window is open in a normal fashion.
     ShowNormal = 0x01,

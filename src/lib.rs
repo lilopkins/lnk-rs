@@ -23,32 +23,31 @@ use std::io::{prelude::*, BufReader, BufWriter};
 use std::fs::File;
 
 mod header;
-pub use header::{LinkFlags, FileAttributeFlags, HotKeyFlags, HotKeyFlagsLowByte, HotKeyFlagsHighByte};
+pub use header::{ShellLinkHeader, LinkFlags, FileAttributeFlags, HotKeyFlags, HotKeyFlagsLowByte, HotKeyFlagsHighByte, ShowCommand};
 
 mod linktarget;
-pub use linktarget::{};
+pub use linktarget::LinkTargetIdList;
 
 mod linkinfo;
-pub use linkinfo::{};
+pub use linkinfo::LinkInfo;
 
 mod stringdata;
-pub use stringdata::{};
 
 mod extradata;
-pub use extradata::{};
+pub use extradata::ExtraData;
 
 /// A shell link
 #[derive(Clone, Debug)]
 pub struct ShellLink {
-    shell_link_header: header::ShellLinkHeader,
-    linktarget_id_list: Option<linktarget::LinkTargetIdList>,
-    link_info: Option<linkinfo::LinkInfo>,
-    name_string: Option<String>,
-    relative_path: Option<String>,
-    working_dir: Option<String>,
-    command_line_arguments: Option<String>,
-    icon_location: Option<String>,
-    extra_data: Vec<extradata::ExtraData>,
+    pub shell_link_header: header::ShellLinkHeader,
+    pub linktarget_id_list: Option<linktarget::LinkTargetIdList>,
+    pub link_info: Option<linkinfo::LinkInfo>,
+    pub name_string: Option<String>,
+    pub relative_path: Option<String>,
+    pub working_dir: Option<String>,
+    pub command_line_arguments: Option<String>,
+    pub icon_location: Option<String>,
+    pub extra_data: Vec<extradata::ExtraData>,
 }
 
 impl ShellLink {
@@ -61,7 +60,7 @@ impl ShellLink {
     /// Create a new ShellLink, left fairly blank for your own customisation.
     pub fn new() -> Self {
         Self {
-            shell_link_header: header::ShellLinkHeader::new(),
+            shell_link_header: header::ShellLinkHeader::default(),
             linktarget_id_list: None,
             link_info: None,
             name_string: None,
@@ -77,7 +76,7 @@ impl ShellLink {
     pub fn save<P: AsRef<std::path::Path>>(&self, path: P) -> std::io::Result<()> {
         let mut w = BufWriter::new(File::create(path)?);
 
-        let header_data = self.shell_link_header.to_data();
+        let header_data: [u8; 0x4c] = self.shell_link_header.into();
         w.write_all(&header_data)?;
 
         Ok(())
@@ -91,8 +90,8 @@ impl ShellLink {
         trace!("Reading file.");
         r.read_to_end(&mut data)?;
 
-        let mut shell_link_header = header::ShellLinkHeader::new();
-        shell_link_header.from_data(&data[0..0x4c]);
+        trace!("Parsing shell header.");
+        let shell_link_header = header::ShellLinkHeader::from(&data[0..0x4c]);
         debug!("Shell header: {:#?}", shell_link_header);
 
         let mut cursor = 0x4c;
@@ -163,14 +162,17 @@ impl ShellLink {
 
         let mut extra_data = Vec::new();
 
-        loop {
+        /*loop {
+            if data.len() < 4 {
+                break; // Probably an error?
+            }
             let query = LE::read_u32(&data[cursor..]);
             if query < 0x04 {
                 break;
             }
             extra_data.push(extradata::ExtraData::from(&data[cursor..]));
             cursor += query as usize;
-        }
+        }*/
 
         let _remaining_data = &data[cursor..];
 
@@ -185,5 +187,31 @@ impl ShellLink {
             icon_location,
             extra_data,
         })
+    }
+}
+
+fn read_enum_u16(data: &[u8]) -> u16 {
+    assert!(data.len() >= 2);
+
+    ((data[0] as u16) << 8) +
+     (data[1] as u16)
+}
+
+fn read_enum_u32(data: &[u8]) -> u32 {
+    assert!(data.len() >= 4);
+
+    ((data[0] as u32) << 24) +
+    ((data[1] as u32) << 16) +
+    ((data[2] as u32) << 8) +
+     (data[3] as u32)
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn read_enum_test() {
+        let data: Vec<u8> = vec![0x12, 0x34, 0x56, 0x78, 0x9a];
+        assert_eq!(super::read_enum_u16(&data[0..]), 0x1234);
+        assert_eq!(super::read_enum_u32(&data[0..]), 0x12345678);
     }
 }
