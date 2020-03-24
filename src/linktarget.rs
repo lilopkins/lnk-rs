@@ -1,3 +1,5 @@
+#[allow(unused)]
+use log::{trace, debug, info, warn, error};
 use byteorder::{ByteOrder, LE};
 
 /// The LinkTargetIDList structure specifies the target of the link. The presence of this optional
@@ -17,7 +19,7 @@ impl Default for LinkTargetIdList {
     fn default() -> Self {
         Self {
             size: 0,
-            id_list: vec![],
+            id_list: Vec::new(),
         }
     }
 }
@@ -27,10 +29,12 @@ impl From<&[u8]> for LinkTargetIdList {
     fn from(data: &[u8]) -> Self {
         let mut id_list = Self::default();
         id_list.size = LE::read_u16(&data[0..]);
-        let mut inner_data = &data[2..(id_list.size as usize)];
+        trace!("ID List size: {}", id_list.size);
+        let mut inner_data = &data[2..=2+(id_list.size as usize)];
         while LE::read_u16(inner_data) != 0 {
             // Read an ItemID
             let id = ItemID::from(inner_data);
+            debug!("Read {:?}", id);
             let size = id.size;
             id_list.id_list.push(id);
             inner_data = &inner_data[(size as usize)..];

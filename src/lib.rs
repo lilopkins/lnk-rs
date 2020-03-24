@@ -100,7 +100,9 @@ impl ShellLink {
         if shell_link_header.link_flags & LinkFlags::HAS_LINK_TARGET_ID_LIST
             == LinkFlags::HAS_LINK_TARGET_ID_LIST {
 
+            debug!("A LinkTargetIDList is marked as present. Parsing now.");
             let list = linktarget::LinkTargetIdList::from(&data[cursor..]);
+            debug!("{:?}", list);
             cursor += list.size as usize;
             linktarget_id_list = Some(list);
         }
