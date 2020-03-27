@@ -1,5 +1,11 @@
 use byteorder::{ByteOrder, LE};
+#[allow(unused)]
+use log::{trace, debug, info, warn, error};
 
+/// ExtraData refers to a set of structures that convey additional information
+/// about a link target. These optional structures can be present in an extra
+/// data section that is appended to the basic Shell Link Binary File Format.
+#[allow(missing_docs)]
 #[derive(Clone, Debug)]
 pub enum ExtraData {
     ConsoleProps(Vec<u8>),
@@ -19,7 +25,7 @@ impl From<&[u8]> for ExtraData {
     fn from(data: &[u8]) -> Self {
         let _size = LE::read_u32(data) as usize;
         let sig = LE::read_u32(&data[4..]);
-        println!("Signature {:x}", sig);
+        debug!("Signature {:x}", sig);
         let data = &data[8..];
 
         match sig {

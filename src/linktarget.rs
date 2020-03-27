@@ -30,14 +30,17 @@ impl From<&[u8]> for LinkTargetIdList {
         let mut id_list = Self::default();
         id_list.size = LE::read_u16(&data[0..]);
         trace!("ID List size: {}", id_list.size);
-        let mut inner_data = &data[2..=2+(id_list.size as usize)];
-        while LE::read_u16(inner_data) != 0 {
+        let mut inner_data = &data[2..(id_list.size as usize)];
+        assert!(inner_data.len() == id_list.size as usize - 2);
+        let mut read_bytes = 2;
+        while read_bytes < id_list.size {
             // Read an ItemID
             let id = ItemID::from(inner_data);
             debug!("Read {:?}", id);
             let size = id.size;
             id_list.id_list.push(id);
             inner_data = &inner_data[(size as usize)..];
+            read_bytes += size;
         }
         id_list
     }
@@ -65,14 +68,14 @@ pub struct ItemID {
     /// including the ItemIDSize field.
     size: u16,
     /// The shell data source-defined data that specifies an item.
-    data: Vec<u8>,
+    data: String,
 }
 
 impl Default for ItemID {
     fn default() -> Self {
         Self {
             size: 0,
-            data: Vec::new(),
+            data: String::new(),
         }
     }
 }
@@ -82,7 +85,7 @@ impl From<&[u8]> for ItemID {
         let mut id = Self::default();
 
         id.size = LE::read_u16(data);
-        id.data = Vec::from(&data[2..(id.size as usize)]);
+        id.data = String::from_utf8_lossy(&data[2..(id.size as usize)]).trim().to_string();
 
         id
     }
@@ -95,7 +98,7 @@ impl Into<Vec<u8>> for ItemID {
         assert_eq!(self.data.len() as u16 + 2, self.size);
 
         LE::write_u16(&mut data, self.size);
-        let mut other_data = self.data.clone();
+        let mut other_data = Vec::from(self.data.as_bytes());
         data.append(&mut other_data);
 
         data

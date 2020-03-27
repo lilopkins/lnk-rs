@@ -128,14 +128,14 @@ bitflags! {
         /// LocalBasePathOffset fields are zero. If the value of the
         /// LinkInfoHeaderSize field is greater than or equal to 0x00000024,
         /// the value of the LocalBasePathOffsetUnicode field is zero.
-        const VOLUME_ID_AND_LOCAL_BASE_PATH = 0b1000_0000_0000_0000_0000_0000_0000_0000;
+        const VOLUME_ID_AND_LOCAL_BASE_PATH = 0b0000_0000_0000_0000_0000_0000_0000_0001;
 
         /// If set, the CommonNetworkRelativeLink field is present, and its
         /// location is specified by the value of the
         /// CommonNetworkRelativeLinkOffset field.If not set, the
         /// CommonNetworkRelativeLink field is not present, and the value of
         /// the CommonNetworkRelativeLinkOffset field is zero
-        const COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX = 0b0100_0000_0000_0000_0000_0000_0000_0000;
+        const COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX = 0b0000_0000_0000_0000_0000_0000_0000_0010;
     }
 }
 
@@ -278,11 +278,11 @@ bitflags! {
         /// If set, the DeviceNameOffset field contains an offset to the device
         /// name. If not set, the DeviceNameOffset field does not contain an
         /// offset to the device name, and its value MUST be zero.
-        const VALID_DEVICE = 0b1000_0000_0000_0000_0000_0000_0000_0000;
+        const VALID_DEVICE = 0b0000_0000_0000_0000_0000_0000_0000_0001;
         /// If set, the NetProviderType field contains the network provider
         /// type. If not set, the NetProviderType field does not contain the
         /// network provider type, and its value MUST be zero.
-        const VALID_NET_TYPE = 0b0100_0000_0000_0000_0000_0000_0000_0000;
+        const VALID_NET_TYPE = 0b0000_0000_0000_0000_0000_0000_0000_0010;
     }
 }
 
