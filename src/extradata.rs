@@ -5,6 +5,8 @@ use log::{trace, debug, info, warn, error};
 /// ExtraData refers to a set of structures that convey additional information
 /// about a link target. These optional structures can be present in an extra
 /// data section that is appended to the basic Shell Link Binary File Format.
+/// 
+/// At the moment, ExtraData can only be read, not written to shortcuts.
 #[allow(missing_docs)]
 #[derive(Clone, Debug)]
 pub enum ExtraData {

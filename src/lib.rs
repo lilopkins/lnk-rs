@@ -106,7 +106,9 @@ impl ShellLink {
         Ok(sl)
     }
 
-    /// Save a shell link
+    /// Save a shell link.
+    /// 
+    /// Note that this doesn't save any [`ExtraData`](struct.ExtraData.html) entries.
     pub fn save<P: AsRef<std::path::Path>>(&self, path: P) -> std::io::Result<()> {
         let mut w = BufWriter::new(File::create(path)?);
 
@@ -117,50 +119,60 @@ impl ShellLink {
         if *self.header().link_flags() & LinkFlags::HAS_LINK_TARGET_ID_LIST
             == LinkFlags::HAS_LINK_TARGET_ID_LIST {
 
+
+            if let None = self.linktarget_id_list { error!("LinkTargetIDList not specified but expected!") }
             debug!("A LinkTargetIDList is marked as present. Writing.");
-            //w.write_all(self.linktarget_id_list.into())?;
+            let mut data: Vec<u8> = self.linktarget_id_list.clone().unwrap().into();
+            w.write_all(&mut data)?;
         }
 
         if *self.header().link_flags() & LinkFlags::HAS_LINK_INFO
             == LinkFlags::HAS_LINK_INFO {
 
+            if let None = self.link_info { error!("LinkInfo not specified but expected!") }
             debug!("LinkInfo is marked as present. Writing.");
-            //w.write_all(self.link_info.into())?;
+            let mut data: Vec<u8> = self.link_info.clone().unwrap().into();
+            w.write_all(&mut data)?;
         }
 
         if *self.header().link_flags() & LinkFlags::HAS_NAME
             == LinkFlags::HAS_NAME {
 
+            if self.name_string == None { error!("Name not specified but expected!") }
             debug!("Name is marked as present. Writing.");
-            //w.write_all(self.name_string.into())?;
+            w.write_all(&stringdata::to_data(self.name_string.as_ref().unwrap()))?;
         }
 
         if *self.header().link_flags() & LinkFlags::HAS_RELATIVE_PATH
             == LinkFlags::HAS_RELATIVE_PATH {
 
+            if self.relative_path == None { error!("Relative path not specified but expected!") }
             debug!("Relative path is marked as present. Writing.");
-            //w.write_all(self.relative_path.into())?;
+            w.write_all(&stringdata::to_data(self.relative_path.as_ref().unwrap()))?;
         }
 
         if *self.header().link_flags() & LinkFlags::HAS_WORKING_DIR
             == LinkFlags::HAS_WORKING_DIR {
 
+            if self.working_dir == None { error!("Working Directory not specified but expected!") }
             debug!("Working dir is marked as present. Writing.");
-            //w.write_all(self.working_dir.into())?;
+            w.write_all(&stringdata::to_data(self.working_dir.as_ref().unwrap()))?;
         }
 
         if *self.header().link_flags() & LinkFlags::HAS_ARGUMENTS
             == LinkFlags::HAS_ARGUMENTS {
 
+            if self.icon_location == None { error!("Arguments not specified but expected!") }
             debug!("Arguments are marked as present. Writing.");
-            //w.write_all(self.command_line_arguments.into())?;
+            w.write_all(&stringdata::to_data(self.command_line_arguments.as_ref().unwrap()))?;
         }
 
         if *self.header().link_flags() & LinkFlags::HAS_ICON_LOCATION
             == LinkFlags::HAS_ICON_LOCATION {
 
+            if self.icon_location == None { error!("Icon Location not specified but expected!") }
             debug!("Icon Location is marked as present. Writing.");
-            //w.write_all(self.icon_location.into())?;
+            w.write_all(&stringdata::to_data(self.icon_location.as_ref().unwrap()))?;
         }
 
         Ok(())
@@ -263,7 +275,7 @@ impl ShellLink {
         let mut extra_data = Vec::new();
 
         loop {
-            if data.len() < 4 {
+            if data[cursor..].len() < 4 {
                 warn!("The ExtraData length is invalid.");
                 break; // Probably an error?
             }
@@ -309,6 +321,14 @@ impl ShellLink {
 
     /// Set the shell link's name
     pub fn set_name(&mut self, name: Option<String>) {
+        let lf = *self.header().link_flags();
+        if let Some(_) = name {
+            self.header_mut().set_link_flags(lf | LinkFlags::HAS_NAME);
+        } else {
+            if lf & LinkFlags::HAS_NAME == LinkFlags::HAS_NAME {
+                self.header_mut().set_link_flags(lf - LinkFlags::HAS_NAME);
+            }
+        }
         self.name_string = name;
     }
 
@@ -319,6 +339,14 @@ impl ShellLink {
 
     /// Set the shell link's relative path
     pub fn set_relative_path(&mut self, relative_path: Option<String>) {
+        let lf = *self.header().link_flags();
+        if let Some(_) = relative_path {
+            self.header_mut().set_link_flags(lf | LinkFlags::HAS_RELATIVE_PATH);
+        } else {
+            if lf & LinkFlags::HAS_RELATIVE_PATH == LinkFlags::HAS_RELATIVE_PATH {
+                self.header_mut().set_link_flags(lf - LinkFlags::HAS_RELATIVE_PATH);
+            }
+        }
         self.relative_path = relative_path;
     }
 
@@ -329,6 +357,14 @@ impl ShellLink {
 
     /// Set the shell link's working directory
     pub fn set_working_dir(&mut self, working_dir: Option<String>) {
+        let lf = *self.header().link_flags();
+        if let Some(_) = working_dir {
+            self.header_mut().set_link_flags(lf | LinkFlags::HAS_WORKING_DIR);
+        } else {
+            if lf & LinkFlags::HAS_WORKING_DIR == LinkFlags::HAS_WORKING_DIR {
+                self.header_mut().set_link_flags(lf - LinkFlags::HAS_WORKING_DIR);
+            }
+        }
         self.working_dir = working_dir;
     }
 
@@ -339,6 +375,14 @@ impl ShellLink {
 
     /// Set the shell link's arguments
     pub fn set_arguments(&mut self, arguments: Option<String>) {
+        let lf = *self.header().link_flags();
+        if let Some(_) = arguments {
+            self.header_mut().set_link_flags(lf | LinkFlags::HAS_ARGUMENTS);
+        } else {
+            if lf & LinkFlags::HAS_ARGUMENTS == LinkFlags::HAS_ARGUMENTS {
+                self.header_mut().set_link_flags(lf - LinkFlags::HAS_ARGUMENTS);
+            }
+        }
         self.command_line_arguments = arguments;
     }
 
@@ -349,6 +393,14 @@ impl ShellLink {
 
     /// Set the shell link's icon location
     pub fn set_icon_location(&mut self, icon_location: Option<String>) {
+        let lf = *self.header().link_flags();
+        if let Some(_) = icon_location {
+            self.header_mut().set_link_flags(lf | LinkFlags::HAS_ICON_LOCATION);
+        } else {
+            if lf & LinkFlags::HAS_ICON_LOCATION == LinkFlags::HAS_ICON_LOCATION {
+                self.header_mut().set_link_flags(lf - LinkFlags::HAS_ICON_LOCATION);
+            }
+        }
         self.icon_location = icon_location;
     }
 }
