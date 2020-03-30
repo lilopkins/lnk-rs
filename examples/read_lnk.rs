@@ -1,5 +1,3 @@
-extern crate lnk;
-
 use std::env;
 
 fn main() {
