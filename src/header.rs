@@ -54,6 +54,11 @@ impl ShellLinkHeader {
         self.link_flags = link_flags;
     }
 
+    /// Set some link flags
+    pub fn update_link_flags(&mut self, link_flags: LinkFlags, value: bool) {
+        self.link_flags.set(link_flags, value);
+    }
+
     /// Get the file attributes
     pub fn file_attributes(&self) -> &FileAttributeFlags {
         &self.file_attributes
@@ -63,7 +68,7 @@ impl ShellLinkHeader {
     pub fn set_file_attributes(&mut self, file_attributes: FileAttributeFlags) {
         self.file_attributes = file_attributes;
     }
-    
+
     /// Get the file creation time
     pub fn creation_time(&self) -> u64 {
         self.creation_time
@@ -141,7 +146,7 @@ impl Default for ShellLinkHeader {
     /// Create a new, blank, ShellLinkHeader
     fn default() -> Self {
         Self {
-            link_flags: LinkFlags::empty(),
+            link_flags: LinkFlags::IS_UNICODE,
             file_attributes: FileAttributeFlags::FILE_ATTRIBUTE_NORMAL,
             creation_time: 0,
             access_time: 0,
@@ -387,12 +392,68 @@ impl HotkeyFlags {
 /// keyboard.
 pub enum HotkeyKey {
     NoKeyAssigned = 0x00,
-    Key0 = 0x30, Key1, Key2, Key3, Key4, Key5, Key6, Key7, Key8, Key9,
-    KeyA = 0x41, KeyB, KeyC, KeyD, KeyE, KeyF, KeyG, KeyH, KeyI, KeyJ, KeyK, KeyL, KeyM, KeyN,
-    KeyO, KeyP, KeyQ, KeyR, KeyS, KeyT, KeyU, KeyV, KeyW, KeyX, KeyY, KeyZ,
-    F1 = 0x70, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, F13, F14, F15, F16, F17, F18, F19,
-    F20, F21, F22, F23, F24,
-    NumLock = 0x90, ScrollLock,
+    Key0 = 0x30,
+    Key1,
+    Key2,
+    Key3,
+    Key4,
+    Key5,
+    Key6,
+    Key7,
+    Key8,
+    Key9,
+    KeyA = 0x41,
+    KeyB,
+    KeyC,
+    KeyD,
+    KeyE,
+    KeyF,
+    KeyG,
+    KeyH,
+    KeyI,
+    KeyJ,
+    KeyK,
+    KeyL,
+    KeyM,
+    KeyN,
+    KeyO,
+    KeyP,
+    KeyQ,
+    KeyR,
+    KeyS,
+    KeyT,
+    KeyU,
+    KeyV,
+    KeyW,
+    KeyX,
+    KeyY,
+    KeyZ,
+    F1 = 0x70,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
+    F13,
+    F14,
+    F15,
+    F16,
+    F17,
+    F18,
+    F19,
+    F20,
+    F21,
+    F22,
+    F23,
+    F24,
+    NumLock = 0x90,
+    ScrollLock,
 }
 
 bitflags! {
