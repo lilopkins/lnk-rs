@@ -24,6 +24,7 @@ use log::{debug, error, info, trace, warn};
 use std::fs::File;
 use std::io::{prelude::*, BufReader, BufWriter};
 use std::path::Path;
+use std::convert::TryFrom;
 
 mod header;
 pub use header::{
@@ -41,6 +42,21 @@ mod stringdata;
 
 mod extradata;
 pub use extradata::ExtraData;
+
+/// The error type for shell link parsing errors.
+#[derive(Debug)]
+pub enum Error {
+    /// An IO error occurred.
+    IoError(std::io::Error),
+    /// The parsed file isn't a shell link.
+    NotAShellLinkError,
+}
+
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Self {
+        Error::IoError(e)
+    }
+}
 
 /// A shell link
 #[derive(Clone, Debug)]
@@ -194,7 +210,7 @@ impl ShellLink {
     }
 
     /// Open and parse a shell link
-    pub fn open<P: AsRef<std::path::Path>>(path: P) -> std::io::Result<Self> {
+    pub fn open<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Error> {
         debug!("Opening {:?}", path.as_ref());
         let mut r = BufReader::new(File::open(path)?);
         let mut data = vec![];
@@ -202,7 +218,10 @@ impl ShellLink {
         r.read_to_end(&mut data)?;
 
         trace!("Parsing shell header.");
-        let shell_link_header = header::ShellLinkHeader::from(&data[0..0x4c]);
+        if data.len() < 0x4c {
+            return Err(Error::NotAShellLinkError);
+        }
+        let shell_link_header = header::ShellLinkHeader::try_from(&data[0..0x4c])?;
         debug!("Shell header: {:#?}", shell_link_header);
 
         let mut cursor = 0x4c;

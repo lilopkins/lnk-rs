@@ -3,6 +3,8 @@ use byteorder::{ByteOrder, LE};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+use std::convert::TryFrom;
+
 const CLSID: u128 = 0x460000000000_00c0_0000_0000_00021401;
 
 /// A ShellLinkHeader structure (section 2.1), which contains identification
@@ -181,13 +183,20 @@ impl Into<[u8; 0x4c]> for ShellLinkHeader {
     }
 }
 
-impl From<&[u8]> for ShellLinkHeader {
+impl TryFrom<&[u8]> for ShellLinkHeader {
+    type Error = crate::Error;
+
     /// Read data into this struct from a `[u8]`.
-    fn from(data: &[u8]) -> Self {
+    /// Returns an error when the magic number is not valid.
+    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
         let mut header = Self::default();
 
-        assert_eq!(LE::read_u32(&data[0..]), 0x4c);
-        assert_eq!(LE::read_u128(&data[4..]), CLSID);
+        if LE::read_u32(&data[0..]) != 0x4c {
+            return Err(crate::Error::NotAShellLinkError);
+        }
+        if LE::read_u128(&data[4..]) != CLSID {
+            return Err(crate::Error::NotAShellLinkError);
+        }
         header.link_flags = LinkFlags::from_bits_truncate(LE::read_u32(&data[20..]));
         header.file_attributes = FileAttributeFlags::from_bits_truncate(LE::read_u32(&data[24..]));
         header.creation_time = LE::read_u64(&data[28..]);
@@ -198,7 +207,7 @@ impl From<&[u8]> for ShellLinkHeader {
         header.show_command = FromPrimitive::from_u32(LE::read_u32(&data[60..])).unwrap();
         header.hotkey = HotkeyFlags::from_bits(LE::read_u16(&data[64..]));
 
-        header
+        Ok(header)
     }
 }
 
