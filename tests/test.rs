@@ -1,4 +1,5 @@
 const TEST_FILE_NAME: &'static str = "tests/test.lnk";
+const TEST_BLANK_FILE_NAME: &'static str = "tests/blank.txt";
 
 use lnk::*;
 #[allow(unused)]
@@ -6,7 +7,7 @@ use log::{debug, error, info, trace, warn};
 
 #[test]
 fn test_lnk_header() {
-    pretty_env_logger::init();
+    let _ = pretty_env_logger::try_init();
 
     let shortcut = ShellLink::open(TEST_FILE_NAME).unwrap();
     debug!("{:#?}", shortcut);
@@ -68,4 +69,13 @@ fn test_lnk_header() {
     assert_eq!(shortcut.name(), &None);
     assert_eq!(shortcut.relative_path(), &Some(r".\a.txt".to_string()));
     assert_eq!(shortcut.working_dir(), &Some(r"C:\test".to_string()));
+}
+
+#[test]
+fn test_no_panic_reading_other_filetypes() {
+    let _ = pretty_env_logger::try_init();
+
+    let res = ShellLink::open(TEST_BLANK_FILE_NAME);
+    // Shouldn't have panicked by now!
+    assert!(res.is_err());
 }
