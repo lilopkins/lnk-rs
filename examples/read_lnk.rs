@@ -3,7 +3,7 @@ use std::env;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() == 0 {
+    if args.len() == 1 {
         eprintln!("You must specify some file(s) to read!");
     }
 
