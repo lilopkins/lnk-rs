@@ -21,7 +21,7 @@ use byteorder::{ByteOrder, LE};
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
-use std::fs::File;
+use std::{fs::File, path::PathBuf};
 use std::io::{prelude::*, BufReader, BufWriter};
 use std::path::Path;
 use std::convert::TryFrom;
@@ -75,7 +75,7 @@ pub struct ShellLink {
 impl Default for ShellLink {
     /// Create a new ShellLink, left blank for manual configuration.
     /// For those who are not familar with the Shell Link specification, I
-    /// suggest you look at the [`new_simple`](#method.new_simple) method.
+    /// suggest you look at the [`ShellLink::new_simple`] method.
     fn default() -> Self {
         Self {
             shell_link_header: header::ShellLinkHeader::default(),
@@ -97,7 +97,14 @@ impl ShellLink {
         use std::fs;
 
         let meta = fs::metadata(&to)?;
-        let canonical = fs::canonicalize(to)?.into_boxed_path();
+        let mut canonical = fs::canonicalize(&to)?.into_boxed_path();
+        if cfg!(windows) {
+            // Remove symbol for long path if present.
+            let can_os = canonical.as_os_str().to_str().unwrap();
+            if can_os.starts_with("\\\\?\\") {
+                canonical = PathBuf::new().join(&can_os[4..]).into_boxed_path();
+            }
+        }
 
         let mut sl = Self::default();
 
@@ -109,11 +116,13 @@ impl ShellLink {
         } else {
             flags |= LinkFlags::HAS_WORKING_DIR | LinkFlags::HAS_RELATIVE_PATH;
             sl.header_mut().set_link_flags(flags);
-            let mut ances = canonical.ancestors();
             sl.set_relative_path(Some(format!(
-                "./{}",
-                canonical.file_name().unwrap().to_str().unwrap()
+                "{}",
+                to.as_ref().to_str().unwrap()
             )));
+
+            let mut ances = canonical.ancestors();
+            ances.next(); // drop the last one - the file name itself
             sl.set_working_dir(Some(ances.next().unwrap().to_str().unwrap().to_string()));
             sl.header_mut().set_file_size(meta.len() as u32);
         }

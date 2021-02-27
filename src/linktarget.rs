@@ -10,7 +10,7 @@ pub struct LinkTargetIdList {
     /// The size, in bytes, of the IDList field.
     pub size: u16,
     /// A stored IDList structure (section 2.2.1), which contains the item ID list. An IDList
-    /// structure conforms to the following ABNF [RFC5234]:
+    /// structure conforms to the following ABNF \[RFC5234\]:
     ///   `IDLIST = *ITEMID TERMINALID`
     id_list: Vec<ItemID>,
 }
