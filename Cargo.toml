@@ -1,14 +1,26 @@
 [package]
 name = "lnk"
-version = "0.3.0"
+version = "0.4.1"
 authors = [
     "Lily Hopkins <bsalarius@gmail.com>",
     "Simon Buchan <simon.buchan.nz@gmail.com>",
 ]
-edition = "2018"
+edition = "2021"
 description = "A Rust library to parse and write Windows shortcut files (.lnk)"
 license = "MIT"
 repository = "https://github.com/lilopkins/lnk-rs"
+
+[features]
+default = []
+experimental_save = []
+
+[[example]]
+name = "create_lnk"
+required-features = ["experimental_save"]
+
+[[test]]
+name = "create-read-blank"
+required-features = ["experimental_save"]
 
 [dependencies]
 log = "0.4.11"

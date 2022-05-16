@@ -11,7 +11,7 @@
 //!
 //! ## Example
 //! A simple example appears as follows:
-//! ```rust
+//! ```ignore
 //! use lnk::ShellLink;
 //! // ...
 //! ShellLink::new_simple(std::path::Path::new(r"C:\Windows\System32\notepad.exe"));
@@ -22,7 +22,10 @@ use byteorder::{ByteOrder, LE};
 use log::{debug, error, info, trace, warn};
 
 use std::fs::File;
-use std::io::{prelude::*, BufReader, BufWriter};
+use std::io::{prelude::*, BufReader};
+#[cfg(feature = "experimental_save")]
+use std::io::BufWriter;
+#[cfg(feature = "experimental_save")]
 use std::path::Path;
 use std::convert::TryFrom;
 
@@ -69,7 +72,7 @@ pub struct ShellLink {
     working_dir: Option<String>,
     command_line_arguments: Option<String>,
     icon_location: Option<String>,
-    extra_data: Vec<extradata::ExtraData>,
+    _extra_data: Vec<extradata::ExtraData>,
 }
 
 impl Default for ShellLink {
@@ -86,12 +89,13 @@ impl Default for ShellLink {
             working_dir: None,
             command_line_arguments: None,
             icon_location: None,
-            extra_data: vec![],
+            _extra_data: vec![],
         }
     }
 }
 
 impl ShellLink {
+    #[cfg(feature = "experimental_save")]
     /// Create a new ShellLink pointing to a location, with otherwise default settings.
     pub fn new_simple<P: AsRef<Path>>(to: P) -> std::io::Result<Self> {
         use std::fs;
@@ -107,20 +111,20 @@ impl ShellLink {
             sl.header_mut()
                 .set_file_attributes(FileAttributeFlags::FILE_ATTRIBUTE_DIRECTORY);
         } else {
-            flags |= LinkFlags::HAS_WORKING_DIR | LinkFlags::HAS_RELATIVE_PATH;
+            flags |= LinkFlags::HAS_WORKING_DIR | LinkFlags::HAS_RELATIVE_PATH | LinkFlags::HAS_LINK_INFO;
             sl.header_mut().set_link_flags(flags);
-            let mut ances = canonical.ancestors();
             sl.set_relative_path(Some(format!(
-                "./{}",
+                ".\\{}",
                 canonical.file_name().unwrap().to_str().unwrap()
             )));
-            sl.set_working_dir(Some(ances.next().unwrap().to_str().unwrap().to_string()));
-            sl.header_mut().set_file_size(meta.len() as u32);
+            sl.set_working_dir(Some(canonical.parent().unwrap().to_str().unwrap().to_string()));
+            sl.link_info = Some(_);
         }
 
         Ok(sl)
     }
 
+    #[cfg(feature = "experimental_save")]
     /// Save a shell link.
     ///
     /// Note that this doesn't save any [`ExtraData`](struct.ExtraData.html) entries.
@@ -321,7 +325,7 @@ impl ShellLink {
             working_dir,
             command_line_arguments,
             icon_location,
-            extra_data,
+            _extra_data: extra_data,
         })
     }
 
@@ -330,6 +334,7 @@ impl ShellLink {
         &self.shell_link_header
     }
 
+    #[cfg(feature = "experimental_save")]
     /// Get a mutable instance of the shell link's header
     pub fn header_mut(&mut self) -> &mut ShellLinkHeader {
         &mut self.shell_link_header
@@ -340,6 +345,7 @@ impl ShellLink {
         &self.name_string
     }
 
+    #[cfg(feature = "experimental_save")]
     /// Set the shell link's name
     pub fn set_name(&mut self, name: Option<String>) {
         self.header_mut()
@@ -352,6 +358,7 @@ impl ShellLink {
         &self.relative_path
     }
 
+    #[cfg(feature = "experimental_save")]
     /// Set the shell link's relative path
     pub fn set_relative_path(&mut self, relative_path: Option<String>) {
         self.header_mut()
@@ -364,6 +371,7 @@ impl ShellLink {
         &self.working_dir
     }
 
+    #[cfg(feature = "experimental_save")]
     /// Set the shell link's working directory
     pub fn set_working_dir(&mut self, working_dir: Option<String>) {
         self.header_mut()
@@ -376,6 +384,7 @@ impl ShellLink {
         &self.command_line_arguments
     }
 
+    #[cfg(feature = "experimental_save")]
     /// Set the shell link's arguments
     pub fn set_arguments(&mut self, arguments: Option<String>) {
         self.header_mut()
@@ -388,6 +397,7 @@ impl ShellLink {
         &self.icon_location
     }
 
+    #[cfg(feature = "experimental_save")]
     /// Set the shell link's icon location
     pub fn set_icon_location(&mut self, icon_location: Option<String>) {
         self.header_mut()
