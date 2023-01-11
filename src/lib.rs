@@ -1,6 +1,7 @@
 #![warn(missing_docs)]
 
 //! # Shell Link parser and writer for Rust.
+//!
 //! Works on any OS - although only really useful in Windows, this library can parse and write
 //! .lnk files, a shell link, that can be understood by Windows.
 //!
@@ -9,25 +10,38 @@
 //! The full specification of these files can be found at
 //! [Microsoft's Website](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/16cb4ca1-9339-4d0c-a68d-bf1d6cc0f943).
 //!
-//! ## Example
+//! ## Read Example
+//!
+//! A simple example appears as follows:
+//! ```
+//! use lnk::ShellLink;
+//! // ...
+//! let shortcut = lnk::ShellLink::open("tests/test.lnk").unwrap();
+//! println!("{:#?}", shortcut);
+//! ```
+//!
+//! ## Write Example
+//!
 //! A simple example appears as follows:
 //! ```ignore
 //! use lnk::ShellLink;
 //! // ...
 //! ShellLink::new_simple(std::path::Path::new(r"C:\Windows\System32\notepad.exe"));
 //! ```
+//!
+//! > **IMPORTANT!**: Writing capability is currently in a very early stage and probably won't work!
 
 use byteorder::{ByteOrder, LE};
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
+use std::convert::TryFrom;
 use std::fs::File;
-use std::io::{prelude::*, BufReader};
 #[cfg(feature = "experimental_save")]
 use std::io::BufWriter;
+use std::io::{prelude::*, BufReader};
 #[cfg(feature = "experimental_save")]
 use std::path::Path;
-use std::convert::TryFrom;
 
 mod header;
 pub use header::{
@@ -43,8 +57,13 @@ pub use linkinfo::LinkInfo;
 
 mod stringdata;
 
-mod extradata;
-pub use extradata::ExtraData;
+/// Structures from the ExtraData section of the Shell Link.
+pub mod extradata;
+
+mod filetime;
+pub use filetime::FileTime;
+
+mod strings;
 
 /// The error type for shell link parsing errors.
 #[derive(Debug)]
@@ -78,7 +97,7 @@ pub struct ShellLink {
 impl Default for ShellLink {
     /// Create a new ShellLink, left blank for manual configuration.
     /// For those who are not familar with the Shell Link specification, I
-    /// suggest you look at the [`new_simple`](#method.new_simple) method.
+    /// suggest you look at the [`ShellLink::new_simple`] method.
     fn default() -> Self {
         Self {
             shell_link_header: header::ShellLinkHeader::default(),
@@ -101,7 +120,14 @@ impl ShellLink {
         use std::fs;
 
         let meta = fs::metadata(&to)?;
-        let canonical = fs::canonicalize(to)?.into_boxed_path();
+        let mut canonical = fs::canonicalize(&to)?.into_boxed_path();
+        if cfg!(windows) {
+            // Remove symbol for long path if present.
+            let can_os = canonical.as_os_str().to_str().unwrap();
+            if can_os.starts_with("\\\\?\\") {
+                canonical = PathBuf::new().join(&can_os[4..]).into_boxed_path();
+            }
+        }
 
         let mut sl = Self::default();
 
@@ -111,13 +137,17 @@ impl ShellLink {
             sl.header_mut()
                 .set_file_attributes(FileAttributeFlags::FILE_ATTRIBUTE_DIRECTORY);
         } else {
-            flags |= LinkFlags::HAS_WORKING_DIR | LinkFlags::HAS_RELATIVE_PATH | LinkFlags::HAS_LINK_INFO;
+            flags |= LinkFlags::HAS_WORKING_DIR
+                | LinkFlags::HAS_RELATIVE_PATH
+                | LinkFlags::HAS_LINK_INFO;
             sl.header_mut().set_link_flags(flags);
             sl.set_relative_path(Some(format!(
                 ".\\{}",
                 canonical.file_name().unwrap().to_str().unwrap()
             )));
-            sl.set_working_dir(Some(canonical.parent().unwrap().to_str().unwrap().to_string()));
+            sl.set_working_dir(Some(
+                canonical.parent().unwrap().to_str().unwrap().to_string(),
+            ));
             sl.link_info = Some(_);
         }
 
@@ -338,6 +368,16 @@ impl ShellLink {
     /// Get a mutable instance of the shell link's header
     pub fn header_mut(&mut self) -> &mut ShellLinkHeader {
         &mut self.shell_link_header
+    }
+
+    /// Get the link target ID List
+    pub fn link_target_id_list(&self) -> &Option<LinkTargetIdList> {
+        &self.linktarget_id_list
+    }
+
+    /// Get the link info structure
+    pub fn link_info(&self) -> &Option<LinkInfo> {
+        &self.link_info
     }
 
     /// Get the shell link's name, if set

@@ -1,6 +1,7 @@
 const TEST_FILE_NAME: &'static str = "tests/test.lnk";
 const TEST_BLANK_FILE_NAME: &'static str = "tests/blank.txt";
 
+use chrono::NaiveDate;
 use lnk::*;
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
@@ -30,18 +31,18 @@ fn test_lnk_header() {
     );
 
     assert_eq!(
-        shortcut.header().creation_time(),
-        0x01c91515f2eee9d0,
+        shortcut.header().creation_time().datetime().date(),
+        NaiveDate::from_ymd_opt(2008, 09, 12).unwrap(),
         "Creation time should be parsed correctly"
     );
     assert_eq!(
-        shortcut.header().access_time(),
-        0x01c91515f2eee9d0,
+        shortcut.header().access_time().datetime().date(),
+        NaiveDate::from_ymd_opt(2008, 09, 12).unwrap(),
         "Access time should be parsed correctly"
     );
     assert_eq!(
-        shortcut.header().write_time(),
-        0x01c91515f2eee9d0,
+        shortcut.header().write_time().datetime().date(),
+        NaiveDate::from_ymd_opt(2008, 09, 12).unwrap(),
         "Write time should be parsed correctly"
     );
 

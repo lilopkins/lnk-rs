@@ -1,6 +1,8 @@
-#[allow(unused)]
-use log::{trace, debug, info, warn, error};
+use std::fmt;
+
 use byteorder::{ByteOrder, LE};
+#[allow(unused)]
+use log::{debug, error, info, trace, warn};
 
 /// The LinkTargetIDList structure specifies the target of the link. The presence of this optional
 /// structure is specified by the HasLinkTargetIDList bit (LinkFlagssection 2.1.1) in the
@@ -10,7 +12,7 @@ pub struct LinkTargetIdList {
     /// The size, in bytes, of the IDList field.
     pub size: u16,
     /// A stored IDList structure (section 2.2.1), which contains the item ID list. An IDList
-    /// structure conforms to the following ABNF [RFC5234]:
+    /// structure conforms to the following ABNF \[RFC5234\]:
     ///   `IDLIST = *ITEMID TERMINALID`
     id_list: Vec<ItemID>,
 }
@@ -56,27 +58,33 @@ impl Into<Vec<u8>> for LinkTargetIdList {
             let mut other_data = id.into();
             data.append(&mut other_data);
         }
-        
+
         data
     }
 }
 
 /// The stored IDList structure specifies the format of a persisted item ID list.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ItemID {
     /// A 16-bit, unsigned integer that specifies the size, in bytes, of the ItemID structure,
     /// including the ItemIDSize field.
-    size: u16,
+    pub(crate) size: u16,
     /// The shell data source-defined data that specifies an item.
-    data: String,
+    data: Vec<u8>,
 }
 
 impl Default for ItemID {
     fn default() -> Self {
         Self {
             size: 0,
-            data: String::new(),
+            data: Vec::new(),
         }
+    }
+}
+
+impl fmt::Debug for ItemID {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ItemID (raw data size {})", self.size)
     }
 }
 
@@ -85,7 +93,7 @@ impl From<&[u8]> for ItemID {
         let mut id = Self::default();
 
         id.size = LE::read_u16(data);
-        id.data = String::from_utf8_lossy(&data[2..(id.size as usize)]).trim().to_string();
+        id.data = Vec::from(&data[2..(id.size as usize)]);
 
         id
     }
@@ -98,7 +106,7 @@ impl Into<Vec<u8>> for ItemID {
         assert_eq!(self.data.len() as u16 + 2, self.size);
 
         LE::write_u16(&mut data, self.size);
-        let mut other_data = Vec::from(self.data.as_bytes());
+        let mut other_data = self.data.clone();
         data.append(&mut other_data);
 
         data

@@ -1,7 +1,9 @@
 use bitflags::bitflags;
 use byteorder::{ByteOrder, LE};
 use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::{FromPrimitive};
+use num_traits::FromPrimitive;
+
+use crate::strings;
 
 /// The LinkInfo structure specifies information necessary to resolve a
 /// linktarget if it is not found in its original location. This includes
@@ -82,28 +84,38 @@ impl From<&[u8]> for LinkInfo {
             let common_path_suffix_offset_unicode = LE::read_u32(&data[32..]) as usize;
 
             if common_path_suffix_offset_unicode != 0 {
-                link_info.common_path_suffix_unicode = Some(String::from_utf8_lossy(&data[common_path_suffix_offset_unicode..]).to_string());
+                link_info.common_path_suffix_unicode = Some(strings::trim_nul_terminated_string(
+                    String::from_utf8_lossy(&data[common_path_suffix_offset_unicode..]).to_string(),
+                ));
             }
         }
         if flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH
-            == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH {
-            
+            == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH
+        {
             assert_ne!(volume_id_offset, 0);
             assert_ne!(local_base_path_offset, 0);
             link_info.volume_id = Some(VolumeID::from(&data[volume_id_offset..]));
-            link_info.local_base_path = Some(String::from_utf8_lossy(&data[local_base_path_offset..]).to_string());
+            link_info.local_base_path = Some(strings::trim_nul_terminated_string(
+                String::from_utf8_lossy(&data[local_base_path_offset..]).to_string(),
+            ));
 
             if local_base_path_offset_unicode != 0 {
-                link_info.local_base_path_unicode = Some(String::from_utf8_lossy(&data[local_base_path_offset_unicode..]).to_string());
+                link_info.local_base_path_unicode = Some(strings::trim_nul_terminated_string(
+                    String::from_utf8_lossy(&data[local_base_path_offset_unicode..]).to_string(),
+                ));
             }
         }
         if flags & LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX
-            == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX {
-
+            == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX
+        {
             assert_ne!(common_network_relative_link_offset, 0);
-            link_info.common_network_relative_link = Some(CommonNetworkRelativeLink::from(&data[common_network_relative_link_offset..]));
+            link_info.common_network_relative_link = Some(CommonNetworkRelativeLink::from(
+                &data[common_network_relative_link_offset..],
+            ));
         }
-        link_info.common_path_suffix = String::from_utf8_lossy(&data[common_path_suffix_offset..]).to_string();
+        link_info.common_path_suffix = strings::trim_nul_terminated_string(
+            String::from_utf8_lossy(&data[common_path_suffix_offset..]).to_string(),
+        );
 
         link_info
     }
@@ -175,7 +187,9 @@ impl From<&[u8]> for VolumeID {
         if volume_label_offset == 0x14 {
             volume_label_offset /* _unicode */ = LE::read_u32(&data[16..]) as usize;
         }
-        volume_id.volume_label = String::from_utf8_lossy(&data[volume_label_offset..]).to_string();
+        volume_id.volume_label = strings::trim_nul_terminated_string(
+            String::from_utf8_lossy(&data[volume_label_offset..]).to_string(),
+        );
 
         volume_id
     }
@@ -249,17 +263,25 @@ impl From<&[u8]> for CommonNetworkRelativeLink {
         let net_name_offset = LE::read_u32(&data[8..]) as usize;
         let device_name_offset = LE::read_u32(&data[12..]) as usize;
         if link.flags & CommonNetworkRelativeLinkFlags::VALID_NET_TYPE
-            == CommonNetworkRelativeLinkFlags::VALID_NET_TYPE {
-
+            == CommonNetworkRelativeLinkFlags::VALID_NET_TYPE
+        {
             link.network_provider_type = NetworkProviderType::from_u32(LE::read_u32(&data[16..]));
         }
-        link.net_name = String::from_utf8_lossy(&data[net_name_offset..]).to_string();
-        link.device_name = String::from_utf8_lossy(&data[device_name_offset..]).to_string();
+        link.net_name = strings::trim_nul_terminated_string(
+            String::from_utf8_lossy(&data[net_name_offset..]).to_string(),
+        );
+        link.device_name = strings::trim_nul_terminated_string(
+            String::from_utf8_lossy(&data[device_name_offset..]).to_string(),
+        );
         if net_name_offset >= 0x14 {
             let net_name_offset_unicode = LE::read_u32(&data[20..]) as usize;
             let device_name_offset_unicode = LE::read_u32(&data[24..]) as usize;
-            link.net_name_unicode = Some(String::from_utf8_lossy(&data[net_name_offset_unicode..]).to_string());
-            link.device_name_unicode = Some(String::from_utf8_lossy(&data[device_name_offset_unicode..]).to_string());
+            link.net_name_unicode = Some(strings::trim_nul_terminated_string(
+                String::from_utf8_lossy(&data[net_name_offset_unicode..]).to_string(),
+            ));
+            link.device_name_unicode = Some(strings::trim_nul_terminated_string(
+                String::from_utf8_lossy(&data[device_name_offset_unicode..]).to_string(),
+            ));
         }
 
         link
