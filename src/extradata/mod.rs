@@ -69,7 +69,6 @@ pub mod tracker_data;
 /// (section 2.2) on platforms that support it.
 pub mod vista_and_above_id_list_data;
 
-
 /// ExtraData refers to a set of structures that convey additional information
 /// about a link target. These optional structures can be present in an extra
 /// data section that is appended to the basic Shell Link Binary File Format.

@@ -146,51 +146,51 @@ impl ConsoleDataBlock {
     /// window. The following bit definitions can be combined to specify 16
     /// different values each for the foreground and background colors:
     pub fn fill_attributes(&self) -> &FillAttributeFlags {
-      &self.fill_attributes
+        &self.fill_attributes
     }
-    
+
     /// A 16-bit, unsigned integer that specifies the fill attributes that
     /// control the foreground and background text color in the console
     /// window popup. The values are the same as for the FillAttributes
     /// field.
     pub fn popup_fill_attributes(&self) -> &FillAttributeFlags {
-      &self.popup_fill_attributes
+        &self.popup_fill_attributes
     }
 
     /// A 16-bit, signed integer that specifies the horizontal size (X axis),
     /// in characters, of the console window buffer.
     pub fn screen_buffer_size_x(&self) -> &i16 {
-      &self.screen_buffer_size_x
+        &self.screen_buffer_size_x
     }
 
     /// A 16-bit, signed integer that specifies the vertical size (Y axis),
     /// in characters, of the console window buffer.
     pub fn screen_buffer_size_y(&self) -> &i16 {
-      &self.screen_buffer_size_y
+        &self.screen_buffer_size_y
     }
 
     /// A 16-bit, signed integer that specifies the horizontal size (X axis),
     /// in characters, of the console window.
     pub fn window_size_x(&self) -> &i16 {
-      &self.window_size_x
+        &self.window_size_x
     }
 
     /// A 16-bit, signed integer that specifies the vertical size (Y axis),
     /// in characters, of the console window.
     pub fn window_size_y(&self) -> &i16 {
-      &self.window_size_y
+        &self.window_size_y
     }
 
     /// A 16-bit, signed integer that specifies the horizontal coordinate (X axis),
     /// in pixels, of the console window origin.
     pub fn window_origin_x(&self) -> &i16 {
-      &self.window_origin_x
+        &self.window_origin_x
     }
 
     /// A 16-bit, signed integer that specifies the vertical coordinate (Y axis),
     /// in pixels, of the console window origin.
     pub fn window_origin_y(&self) -> &i16 {
-      &self.window_origin_y
+        &self.window_origin_y
     }
 
     /// A 32-bit, unsigned integer that specifies the size, in pixels, of the
@@ -198,76 +198,76 @@ impl ConsoleDataBlock {
     /// the font height and the two least significant bytes contain the font
     /// width. For vector fonts, the width is set to zero.
     pub fn font_size(&self) -> &u32 {
-      &self.font_size
+        &self.font_size
     }
 
     /// A 32-bit, unsigned integer that specifies the family of the font used
     /// in the console window. This value MUST be comprised of a font family
     /// and an optional font pitch.
     pub fn font_family(&self) -> &FontFamilyFlags {
-      &self.font_family
+        &self.font_family
     }
 
     /// A 32-bit, unsigned integer that specifies the stroke weight of the font
     /// used in the console window.
     pub fn font_weight(&self) -> &u32 {
-      &self.font_weight
+        &self.font_weight
     }
 
     /// A 32-character Unicode string that specifies the face name of the font
     /// used in the console window.
     pub fn face_name(&self) -> &String {
-      &self.face_name
+        &self.face_name
     }
 
     /// A 32-bit, unsigned integer that specifies the size of the cursor, in
     /// pixels, used in the console window.
     pub fn cursor_size(&self) -> &u32 {
-      &self.cursor_size
+        &self.cursor_size
     }
 
     /// A 32-bit, unsigned integer that specifies whether to open the console
     /// window in full-screen mode.
     pub fn full_screen(&self) -> &bool {
-      &self.full_screen
+        &self.full_screen
     }
 
     /// A 32-bit, unsigned integer that specifies whether to open the console
     /// window in QuikEdit mode. In QuickEdit mode, the mouse can be used to
     /// cut, copy, and paste text in the console window.
     pub fn quick_edit(&self) -> &bool {
-      &self.quick_edit
+        &self.quick_edit
     }
 
     /// A 32-bit, unsigned integer that specifies insert mode in the console
     /// window.
     pub fn insert_mode(&self) -> &bool {
-      &self.insert_mode
+        &self.insert_mode
     }
 
     /// A 32-bit, unsigned integer that specifies auto-position mode of the
     /// console window.
     pub fn auto_position(&self) -> &bool {
-      &self.auto_position
+        &self.auto_position
     }
 
     /// A 32-bit, unsigned integer that specifies the size, in characters, of
     /// the buffer that is used to store a history of user input into the
     /// console window.
     pub fn history_buffer_size(&self) -> &u32 {
-      &self.history_buffer_size
+        &self.history_buffer_size
     }
 
     /// A 32-bit, unsigned integer that specifies the number of history
     /// buffers to use.
     pub fn number_of_history_buffers(&self) -> &u32 {
-      &self.number_of_history_buffers
+        &self.number_of_history_buffers
     }
 
     /// A 32-bit, unsigned integer that specifies whether to remove duplicates
     /// in the history buffer.
     pub fn history_no_dup(&self) -> &bool {
-      &self.history_no_dup
+        &self.history_no_dup
     }
 
     /// A table of 16 32-bit, unsigned integers specifying the RGB colors that
@@ -276,7 +276,7 @@ impl ConsoleDataBlock {
     /// indexes into this table to specify the final foreground and background
     /// color for a character.
     pub fn color_table(&self) -> &[u32; 16] {
-      &self.color_table
+        &self.color_table
     }
 }
 
