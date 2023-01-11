@@ -2,7 +2,7 @@ use std::env;
 
 fn main() {
     pretty_env_logger::init();
-    
+
     let args: Vec<String> = env::args().collect();
 
     if args.len() == 1 {

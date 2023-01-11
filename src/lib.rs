@@ -21,13 +21,13 @@ use byteorder::{ByteOrder, LE};
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
+use std::convert::TryFrom;
 use std::fs::File;
-use std::io::{prelude::*, BufReader};
 #[cfg(feature = "experimental_save")]
 use std::io::BufWriter;
+use std::io::{prelude::*, BufReader};
 #[cfg(feature = "experimental_save")]
 use std::path::Path;
-use std::convert::TryFrom;
 
 mod header;
 pub use header::{
@@ -43,8 +43,8 @@ pub use linkinfo::LinkInfo;
 
 mod stringdata;
 
-mod extradata;
-pub use extradata::ExtraData;
+/// Structures from the ExtraData section of the Shell Link.
+pub mod extradata;
 
 mod filetime;
 pub use filetime::FileTime;
@@ -123,13 +123,17 @@ impl ShellLink {
             sl.header_mut()
                 .set_file_attributes(FileAttributeFlags::FILE_ATTRIBUTE_DIRECTORY);
         } else {
-            flags |= LinkFlags::HAS_WORKING_DIR | LinkFlags::HAS_RELATIVE_PATH | LinkFlags::HAS_LINK_INFO;
+            flags |= LinkFlags::HAS_WORKING_DIR
+                | LinkFlags::HAS_RELATIVE_PATH
+                | LinkFlags::HAS_LINK_INFO;
             sl.header_mut().set_link_flags(flags);
             sl.set_relative_path(Some(format!(
                 ".\\{}",
                 canonical.file_name().unwrap().to_str().unwrap()
             )));
-            sl.set_working_dir(Some(canonical.parent().unwrap().to_str().unwrap().to_string()));
+            sl.set_working_dir(Some(
+                canonical.parent().unwrap().to_str().unwrap().to_string(),
+            ));
             sl.link_info = Some(_);
         }
 

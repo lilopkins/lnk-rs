@@ -1,6 +1,8 @@
-#[allow(unused)]
-use log::{trace, debug, info, warn, error};
+use std::fmt;
+
 use byteorder::{ByteOrder, LE};
+#[allow(unused)]
+use log::{debug, error, info, trace, warn};
 
 /// The LinkTargetIDList structure specifies the target of the link. The presence of this optional
 /// structure is specified by the HasLinkTargetIDList bit (LinkFlagssection 2.1.1) in the
@@ -56,17 +58,17 @@ impl Into<Vec<u8>> for LinkTargetIdList {
             let mut other_data = id.into();
             data.append(&mut other_data);
         }
-        
+
         data
     }
 }
 
 /// The stored IDList structure specifies the format of a persisted item ID list.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ItemID {
     /// A 16-bit, unsigned integer that specifies the size, in bytes, of the ItemID structure,
     /// including the ItemIDSize field.
-    size: u16,
+    pub(crate) size: u16,
     /// The shell data source-defined data that specifies an item.
     data: Vec<u8>,
 }
@@ -77,6 +79,12 @@ impl Default for ItemID {
             size: 0,
             data: Vec::new(),
         }
+    }
+}
+
+impl fmt::Debug for ItemID {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ItemID (raw data size {})", self.size)
     }
 }
 
