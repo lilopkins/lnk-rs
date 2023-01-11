@@ -68,14 +68,14 @@ pub struct ItemID {
     /// including the ItemIDSize field.
     size: u16,
     /// The shell data source-defined data that specifies an item.
-    data: String,
+    data: Vec<u8>,
 }
 
 impl Default for ItemID {
     fn default() -> Self {
         Self {
             size: 0,
-            data: String::new(),
+            data: Vec::new(),
         }
     }
 }
@@ -85,7 +85,7 @@ impl From<&[u8]> for ItemID {
         let mut id = Self::default();
 
         id.size = LE::read_u16(data);
-        id.data = String::from_utf8_lossy(&data[2..(id.size as usize)]).trim().to_string();
+        id.data = Vec::from(&data[2..(id.size as usize)]);
 
         id
     }
@@ -98,7 +98,7 @@ impl Into<Vec<u8>> for ItemID {
         assert_eq!(self.data.len() as u16 + 2, self.size);
 
         LE::write_u16(&mut data, self.size);
-        let mut other_data = Vec::from(self.data.as_bytes());
+        let mut other_data = self.data.clone();
         data.append(&mut other_data);
 
         data
