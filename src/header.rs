@@ -5,6 +5,8 @@ use num_traits::FromPrimitive;
 
 use std::convert::TryFrom;
 
+use crate::FileTime;
+
 const CLSID: u128 = 0x460000000000_00c0_0000_0000_00021401;
 
 /// A ShellLinkHeader structure (section 2.1), which contains identification
@@ -21,15 +23,15 @@ pub struct ShellLinkHeader {
     /// A FILETIME structure ([MS-DTYP]section 2.3.3) that specifies the creation time of the link
     /// target in UTC (Coordinated Universal Time). If the value is zero, there is no creation time
     /// set on the link target.
-    creation_time: u64,
+    creation_time: FileTime,
     /// A FILETIME structure ([MS-DTYP] section2.3.3) that specifies the access time of the link
     /// target in UTC (Coordinated Universal Time). If the value is zero, there is no access time
     /// set on the link target.
-    access_time: u64,
+    access_time: FileTime,
     /// A FILETIME structure ([MS-DTYP] section 2.3.3) that specifies the write time of the link
     /// target in UTC (Coordinated Universal Time). If the value is zero, there is no write time
     /// set on the link target.
-    write_time: u64,
+    write_time: FileTime,
     /// A 32-bit unsigned integer that specifies the size, in bytes, of the link target. If the
     /// link target fileis larger than 0xFFFFFFFF, this value specifies the least significant 32
     /// bits of the link target file size.
@@ -72,32 +74,32 @@ impl ShellLinkHeader {
     }
 
     /// Get the file creation time
-    pub fn creation_time(&self) -> u64 {
+    pub fn creation_time(&self) -> FileTime {
         self.creation_time
     }
 
     /// Set the file creation time
-    pub fn set_creation_time(&mut self, creation_time: u64) {
+    pub fn set_creation_time(&mut self, creation_time: FileTime) {
         self.creation_time = creation_time;
     }
 
     /// Get the file access time
-    pub fn access_time(&self) -> u64 {
+    pub fn access_time(&self) -> FileTime {
         self.access_time
     }
 
     /// Set the file access time
-    pub fn set_access_time(&mut self, access_time: u64) {
+    pub fn set_access_time(&mut self, access_time: FileTime) {
         self.access_time = access_time;
     }
 
     /// Get the file write time
-    pub fn write_time(&self) -> u64 {
+    pub fn write_time(&self) -> FileTime {
         self.write_time
     }
 
     /// Set the file write time
-    pub fn set_write_time(&mut self, write_time: u64) {
+    pub fn set_write_time(&mut self, write_time: FileTime) {
         self.write_time = write_time;
     }
 
@@ -150,9 +152,9 @@ impl Default for ShellLinkHeader {
         Self {
             link_flags: LinkFlags::IS_UNICODE,
             file_attributes: FileAttributeFlags::FILE_ATTRIBUTE_NORMAL,
-            creation_time: 0,
-            access_time: 0,
-            write_time: 0,
+            creation_time: FileTime::now(),
+            access_time: FileTime::now(),
+            write_time: FileTime::now(),
             file_size: 0,
             icon_index: 0,
             show_command: ShowCommand::ShowNormal,
@@ -169,9 +171,9 @@ impl Into<[u8; 0x4c]> for ShellLinkHeader {
         LE::write_u128(&mut header_data[4..], CLSID);
         LE::write_u32(&mut header_data[20..], self.link_flags.bits);
         LE::write_u32(&mut header_data[24..], self.file_attributes.bits);
-        LE::write_u64(&mut header_data[28..], self.creation_time);
-        LE::write_u64(&mut header_data[36..], self.access_time);
-        LE::write_u64(&mut header_data[44..], self.write_time);
+        LE::write_u64(&mut header_data[28..], self.creation_time.into());
+        LE::write_u64(&mut header_data[36..], self.access_time.into());
+        LE::write_u64(&mut header_data[44..], self.write_time.into());
         LE::write_u32(&mut header_data[52..], self.file_size);
         LE::write_i32(&mut header_data[56..], self.icon_index);
         LE::write_u32(&mut header_data[60..], self.show_command as u32);
@@ -199,9 +201,9 @@ impl TryFrom<&[u8]> for ShellLinkHeader {
         }
         header.link_flags = LinkFlags::from_bits_truncate(LE::read_u32(&data[20..]));
         header.file_attributes = FileAttributeFlags::from_bits_truncate(LE::read_u32(&data[24..]));
-        header.creation_time = LE::read_u64(&data[28..]);
-        header.access_time = LE::read_u64(&data[36..]);
-        header.write_time = LE::read_u64(&data[44..]);
+        header.creation_time = FileTime::from(LE::read_u64(&data[28..]));
+        header.access_time = FileTime::from(LE::read_u64(&data[36..]));
+        header.write_time = FileTime::from(LE::read_u64(&data[44..]));
         header.file_size = LE::read_u32(&data[52..]);
         header.icon_index = LE::read_i32(&data[56..]);
         header.show_command = FromPrimitive::from_u32(LE::read_u32(&data[60..])).unwrap();
