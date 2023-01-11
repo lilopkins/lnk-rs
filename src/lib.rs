@@ -1,6 +1,7 @@
 #![warn(missing_docs)]
 
 //! # Shell Link parser and writer for Rust.
+//!
 //! Works on any OS - although only really useful in Windows, this library can parse and write
 //! .lnk files, a shell link, that can be understood by Windows.
 //!
@@ -9,13 +10,26 @@
 //! The full specification of these files can be found at
 //! [Microsoft's Website](https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/16cb4ca1-9339-4d0c-a68d-bf1d6cc0f943).
 //!
-//! ## Example
+//! ## Read Example
+//!
+//! A simple example appears as follows:
+//! ```
+//! use lnk::ShellLink;
+//! // ...
+//! let shortcut = lnk::ShellLink::open("tests/test.lnk").unwrap();
+//! println!("{:#?}", shortcut);
+//! ```
+//!
+//! ## Write Example
+//!
 //! A simple example appears as follows:
 //! ```ignore
 //! use lnk::ShellLink;
 //! // ...
 //! ShellLink::new_simple(std::path::Path::new(r"C:\Windows\System32\notepad.exe"));
 //! ```
+//!
+//! > **IMPORTANT!**: Writing capability is currently in a very early stage and probably won't work!
 
 use byteorder::{ByteOrder, LE};
 #[allow(unused)]
