@@ -51,6 +51,51 @@ pub struct LinkInfo {
     common_path_suffix_unicode: Option<String>,
 }
 
+impl LinkInfo {
+    /// An optional VolumeID structure (section 2.3.1) that specifies
+    /// information about the volume that the link target was on when the link
+    /// was created. This field is present if the VolumeIDAndLocalBasePath
+    /// flag is set.
+    pub fn volume_id(&self) -> &Option<VolumeID> {
+        &self.volume_id
+    }
+    /// An optional, NULL–terminated string, defined by the system default code
+    /// page, which is used to construct the full path to the link item or link
+    /// target by appending the string in the CommonPathSuffix field. This
+    /// field is present if the VolumeIDAndLocalBasePath flag is set.
+    pub fn local_base_path(&self) -> &Option<String> {
+        &self.local_base_path
+    }
+    /// An optional CommonNetworkRelativeLink structure (section 2.3.2) that
+    /// specifies information about the network location where the link target
+    /// is stored.
+    pub fn common_network_relative_link(&self) -> &Option<CommonNetworkRelativeLink> {
+        &self.common_network_relative_link
+    }
+    /// A NULL–terminated string, defined by the system default code page,
+    /// which is used to construct the full path to the link item or link
+    /// target by being appended to the string in the LocalBasePath field.
+    pub fn common_path_suffix(&self) -> &String {
+        &self.common_path_suffix
+    }
+    /// An optional, NULL–terminated, Unicode string that is used to construct
+    /// the full path to the link item or link target by appending the string
+    /// in the CommonPathSuffixUnicode field. This field can be present only
+    /// if the VolumeIDAndLocalBasePath flag is set and the value of the
+    /// LinkInfoHeaderSize field is greater than or equal to 0x00000024.
+    pub fn local_base_path_unicode(&self) -> &Option<String> {
+        &self.local_base_path_unicode
+    }
+    /// An optional, NULL–terminated, Unicode string that is used to construct
+    /// the full path to the link item or link target by being appended to the
+    /// string in the LocalBasePathUnicode field. This field can be present
+    /// only if the value of the LinkInfoHeaderSize field is greater than or
+    /// equal to 0x00000024.
+    pub fn common_path_suffix_unicode(&self) -> &Option<String> {
+        &self.common_path_suffix_unicode
+    }
+}
+
 impl Default for LinkInfo {
     fn default() -> Self {
         Self {
@@ -128,6 +173,8 @@ impl Into<Vec<u8>> for LinkInfo {
 }
 
 bitflags! {
+    /// Flags that specify whether the VolumeID, LocalBasePath, LocalBasePathUnicode,
+    /// and CommonNetworkRelativeLink fields are present in this structure.
     pub struct LinkInfoFlags: u32 {
         /// If set, the VolumeIDand LocalBasePath fields are present, and their
         /// locations are specified by the values of the VolumeIDOffset and
@@ -166,6 +213,23 @@ pub struct VolumeID {
     volume_label: String,
 }
 
+impl VolumeID {
+    /// A 32-bit, unsigned integer that specifies the type of drive the link
+    /// target is stored on.
+    pub fn drive_type(&self) -> &DriveType {
+        &self.drive_type
+    }
+    /// A 32-bit, unsigned integer that specifies the drive serial number of
+    /// the volume the link target is stored on.
+    pub fn drive_serial_number(&self) -> &u32 {
+        &self.drive_serial_number
+    }
+    /// The label of the volume that the link target is stored on.
+    pub fn volume_label(&self) -> &String {
+        &self.volume_label
+    }
+}
+
 impl Default for VolumeID {
     fn default() -> Self {
         Self {
@@ -201,17 +265,28 @@ impl Into<Vec<u8>> for VolumeID {
     }
 }
 
+/// A 32-bit, unsigned integer that specifies the type of drive the link target is stored on.
 #[derive(Clone, Debug, FromPrimitive, ToPrimitive)]
 pub enum DriveType {
+    /// The drive type cannot be determined.
     DriveUnknown = 0x00,
+    /// The root path is invalid; for example, there is no volume mounted at the path.
     DriveNoRootDir = 0x01,
+    /// The drive has removable media, such as a floppy drive, thumb drive, or flash card reader.
     DriveRemovable = 0x02,
+    /// The drive has fixed media, such as a hard drive or flash drive.
     DriveFixed = 0x03,
+    /// The drive is a remote (network) drive.
     DriveRemote = 0x04,
+    /// The drive is a CD-ROM drive.
     DriveCDRom = 0x05,
+    /// The drive is a RAM disk.
     DriveRamdisk = 0x06,
 }
 
+/// The CommonNetworkRelativeLink structure specifies information about the network location where a
+/// link target is stored, including the mapped drive letter and the UNC path prefix. For details on
+/// UNC paths, see [MS-DFSNM] section 2.2.1.4.
 #[derive(Clone, Debug)]
 pub struct CommonNetworkRelativeLink {
     /// Flags that specify the contents of the DeviceNameOffset and
@@ -308,6 +383,8 @@ bitflags! {
     }
 }
 
+/// A 32-bit, unsigned integer that specifies the type of network provider.
+#[allow(missing_docs)]
 #[derive(Clone, Debug, FromPrimitive, ToPrimitive)]
 pub enum NetworkProviderType {
     Avid = 0x1a0000,
