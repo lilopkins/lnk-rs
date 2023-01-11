@@ -13,6 +13,20 @@ pub struct EnvironmentVariableDataBlock {
     target_unicode: Option<String>,
 }
 
+impl EnvironmentVariableDataBlock {
+    /// A NULL-terminated string, defined by the system default code
+    /// page, which specifies a path to environment variable information.
+    pub fn target_ansi(&self) -> &String {
+        &self.target_ansi
+    }
+
+    /// An optional, NULL-terminated, Unicode string that specifies a path
+    /// to environment variable information.
+    pub fn target_unicode(&self) -> &Option<String> {
+        &self.target_unicode
+    }
+}
+
 impl From<&[u8]> for EnvironmentVariableDataBlock {
     fn from(data: &[u8]) -> Self {
         let target_ansi =

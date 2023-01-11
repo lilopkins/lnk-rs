@@ -11,17 +11,64 @@ use self::{
     vista_and_above_id_list_data::VistaAndAboveIdListDataBlock,
 };
 
+/// The ConsoleDataBlock structure specifies the display settings to use
+/// when a link target specifies an application that is run in a console
+/// window.
 pub mod console_data;
+
+/// The ConsoleFEDataBlock structure specifies the code page to use
+/// for displaying text when a link target specifies an application
+/// that is run in a console window.
 pub mod console_fe_data;
+
+/// The DarwinDataBlock structure specifies an application identifier
+/// that can be used instead of a link target IDList to install an
+/// application when a shell link is activated.
 pub mod darwin_data;
+
+/// The EnvironmentVariableDataBlock structure specifies a path to
+/// environment variable information when the link target refers to
+/// a location that has a corresponding environment variable.
 pub mod environment_variable_data;
+
+/// The IconEnvironmentDataBlock structure specifies the path to an
+/// icon. The path is encoded using environment variables, which makes
+/// it possible to find the icon across machines where the locations
+/// vary but are expressed using environment variables.
 pub mod icon_environment_data;
+
+/// The KnownFolderDataBlock structure specifies the location of a
+/// known folder. This data can be used when a link target is a
+/// known folder to keep track of the folder so that the link target
+/// IDList can be translated when the link is loaded.
 pub mod known_folder_data;
+
+/// A PropertyStoreDataBlock structure specifies a set of properties
+/// that can be used by applications to store extra data in the
+/// shell link.
 pub mod property_store_data;
+
+/// The ShimDataBlock structure specifies the name of a shim that can
+/// be applied when activating a link target.
 pub mod shim_data;
+
+/// The SpecialFolderDataBlock structure specifies the location of a
+/// special folder. This data can be used when a link target is a
+/// special folder to keep track of the folder, so that the link target
+/// IDList can be translated when the link is loaded.
 pub mod special_folder_data;
+
+/// The TrackerDataBlock structure specifies data that can be used to
+/// resolve a link target if it is not found in its original location
+/// when the link is resolved. This data is passed to the Link
+/// Tracking service [MS-DLTW] to find the link target.
 pub mod tracker_data;
+
+/// The VistaAndAboveIDListDataBlock structure specifies an alternate
+/// IDList that can be used instead of the LinkTargetIDList structure
+/// (section 2.2) on platforms that support it.
 pub mod vista_and_above_id_list_data;
+
 
 /// ExtraData refers to a set of structures that convey additional information
 /// about a link target. These optional structures can be present in an extra

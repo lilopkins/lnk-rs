@@ -21,6 +21,23 @@ pub struct TrackerDataBlock {
     droid_birth: [u128; 2],
 }
 
+impl TrackerDataBlock {
+    /// Get the machine ID
+    pub fn machine_id(&self) -> &String {
+        &self.machine_id
+    }
+
+    /// Get the droid GUIDs
+    pub fn droid(&self) -> &[u128; 2] {
+        &self.droid
+    }
+
+    /// Get the droid birth GUIDs
+    pub fn droid_birth(&self) -> &[u128; 2] {
+        &self.droid_birth
+    }
+}
+
 impl From<&[u8]> for TrackerDataBlock {
     fn from(data: &[u8]) -> Self {
         let machine_id =

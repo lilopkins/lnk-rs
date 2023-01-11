@@ -15,6 +15,21 @@ pub struct SpecialFolderDataBlock {
     offset: u32,
 }
 
+impl SpecialFolderDataBlock {
+    /// A 32-bit, unsigned integer that specifies the folder integer ID.
+    pub fn special_folder_id(&self) -> u32 {
+        self.special_folder_id
+    }
+
+    /// A 32-bit, unsigned integer that specifies the location of the
+    /// ItemID of the first child segment of the IDList specified by
+    /// SpecialFolderID. This value is the offset, in bytes, into the
+    /// link target IDList.
+    pub fn offset(&self) -> u32 {
+        self.offset
+    }
+}
+
 impl From<&[u8]> for SpecialFolderDataBlock {
     fn from(data: &[u8]) -> Self {
         let special_folder_id = LE::read_u32(data);

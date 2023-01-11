@@ -356,6 +356,16 @@ impl ShellLink {
         &mut self.shell_link_header
     }
 
+    /// Get the link target ID List
+    pub fn link_target_id_list(&self) -> &Option<LinkTargetIdList> {
+        &self.linktarget_id_list
+    }
+
+    /// Get the link info structure
+    pub fn link_info(&self) -> &Option<LinkInfo> {
+        &self.link_info
+    }
+
     /// Get the shell link's name, if set
     pub fn name(&self) -> &Option<String> {
         &self.name_string

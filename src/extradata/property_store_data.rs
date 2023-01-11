@@ -9,6 +9,13 @@ pub struct PropertyStoreDataBlock {
     property_store: Vec<u8>,
 }
 
+impl PropertyStoreDataBlock {
+    /// A serialized property storage structure ([MS-PROPSTORE] section 2.2).
+    pub fn property_store(&self) -> &Vec<u8> {
+        &self.property_store
+    }
+}
+
 impl fmt::Debug for PropertyStoreDataBlock {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(

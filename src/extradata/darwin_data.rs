@@ -14,6 +14,21 @@ pub struct DarwinDataBlock {
     darwin_data_unicode: Option<String>,
 }
 
+impl DarwinDataBlock {
+    /// A NULL–terminated string, defined by the system default code
+    /// page, which specifies an application identifier. This field
+    /// SHOULD be ignored.
+    pub fn darwin_data_ansi(&self) -> &String {
+        &self.darwin_data_ansi
+    }
+
+    /// An optional, NULL–terminated, Unicode string that specifies
+    /// an application identifier.
+    pub fn darwin_data_unicode(&self) -> &Option<String> {
+        &self.darwin_data_unicode
+    }
+}
+
 impl From<&[u8]> for DarwinDataBlock {
     fn from(data: &[u8]) -> Self {
         let darwin_data_ansi =

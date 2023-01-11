@@ -12,6 +12,13 @@ pub struct VistaAndAboveIdListDataBlock {
     id_list: Vec<ItemID>,
 }
 
+impl VistaAndAboveIdListDataBlock {
+    /// Get the ID List
+    pub fn id_list(&self) -> &Vec<ItemID> {
+        &self.id_list
+    }
+}
+
 impl From<&[u8]> for VistaAndAboveIdListDataBlock {
     fn from(data: &[u8]) -> Self {
         let mut id_list = Vec::new();
