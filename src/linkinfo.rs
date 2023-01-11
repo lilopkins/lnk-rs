@@ -16,7 +16,7 @@ pub struct LinkInfo {
     /// Flags that specify whether the VolumeID, LocalBasePath,
     /// LocalBasePathUnicode, and CommonNetworkRelativeLinkfields are present
     /// in this structure.
-    link_info_flags: LinkInfoFlags,
+    _link_info_flags: LinkInfoFlags,
     /// An optional VolumeID structure (section 2.3.1) that specifies
     /// information about the volume that the link target was on when the link
     /// was created. This field is present if the VolumeIDAndLocalBasePath
@@ -53,7 +53,7 @@ impl Default for LinkInfo {
     fn default() -> Self {
         Self {
             size: 0,
-            link_info_flags: LinkInfoFlags::empty(),
+            _link_info_flags: LinkInfoFlags::empty(),
             volume_id: None,
             local_base_path: None,
             common_network_relative_link: None,
