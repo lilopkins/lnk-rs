@@ -49,16 +49,26 @@ pub use header::{
     ShowCommand,
 };
 
-mod linktarget;
+/// The LinkTargetIDList structure specifies the target of the link. The presence of this optional
+/// structure is specified by the HasLinkTargetIDList bit (LinkFlagssection 2.1.1) in the
+/// ShellLinkHeader(section2.1).
+pub mod linktarget;
 pub use linktarget::LinkTargetIdList;
 
-mod linkinfo;
+/// The LinkInfo structure specifies information necessary to resolve a
+/// linktarget if it is not found in its original location. This includes
+/// information about the volume that the target was stored on, the mapped
+/// drive letter, and a Universal Naming Convention (UNC)form of the path
+/// if one existed when the linkwas created. For more details about UNC
+/// paths, see [MS-DFSNM] section 2.2.1.4
+pub mod linkinfo;
 pub use linkinfo::LinkInfo;
 
 mod stringdata;
 
 /// Structures from the ExtraData section of the Shell Link.
 pub mod extradata;
+pub use extradata::ExtraData;
 
 mod filetime;
 pub use filetime::FileTime;

@@ -17,6 +17,13 @@ pub struct LinkTargetIdList {
     id_list: Vec<ItemID>,
 }
 
+impl LinkTargetIdList {
+    /// A stored IDList structure (section 2.2.1), which contains the item ID list.
+    pub fn id_list(&self) -> &Vec<ItemID> {
+        &self.id_list
+    }
+}
+
 impl Default for LinkTargetIdList {
     fn default() -> Self {
         Self {
@@ -71,6 +78,13 @@ pub struct ItemID {
     pub(crate) size: u16,
     /// The shell data source-defined data that specifies an item.
     data: Vec<u8>,
+}
+
+impl ItemID {
+    /// The shell data source-defined data that specifies an item.
+    pub fn data(&self) -> &Vec<u8> {
+        &self.data
+    }
 }
 
 impl Default for ItemID {
