@@ -49,6 +49,8 @@ pub use extradata::ExtraData;
 mod filetime;
 pub use filetime::FileTime;
 
+mod strings;
+
 /// The error type for shell link parsing errors.
 #[derive(Debug)]
 pub enum Error {
