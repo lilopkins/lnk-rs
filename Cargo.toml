@@ -10,18 +10,6 @@ description = "A Rust library to parse and write Windows shortcut files (.lnk)"
 license = "MIT"
 repository = "https://github.com/lilopkins/lnk-rs"
 
-[features]
-default = []
-experimental_save = []
-
-[[example]]
-name = "create_lnk"
-required-features = ["experimental_save"]
-
-[[test]]
-name = "create-read-blank"
-required-features = ["experimental_save"]
-
 [dependencies]
 log = "0.4.11"
 bitflags = "1.2.1"

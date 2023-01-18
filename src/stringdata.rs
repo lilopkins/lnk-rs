@@ -28,7 +28,6 @@ pub fn parse_string(data: &[u8], flags: LinkFlags) -> (usize, String) {
     result
 }
 
-#[cfg(feature = "experimental_save")]
 pub fn to_data<S: Into<String>>(str_data: S, flags: LinkFlags) -> Vec<u8> {
     let s = str_data.into();
     if !flags.contains(LinkFlags::IS_UNICODE) {

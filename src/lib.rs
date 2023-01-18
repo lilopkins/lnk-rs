@@ -37,11 +37,8 @@ use log::{debug, error, info, trace, warn};
 
 use std::convert::TryFrom;
 use std::fs::File;
-#[cfg(feature = "experimental_save")]
-use std::io::BufWriter;
-use std::io::{prelude::*, BufReader};
-#[cfg(feature = "experimental_save")]
-use std::path::Path;
+use std::io::{prelude::*, BufReader, BufWriter};
+use std::path::{Path, PathBuf};
 
 mod header;
 pub use header::{
@@ -124,7 +121,6 @@ impl Default for ShellLink {
 }
 
 impl ShellLink {
-    #[cfg(feature = "experimental_save")]
     /// Create a new ShellLink pointing to a location, with otherwise default settings.
     pub fn new_simple<P: AsRef<Path>>(to: P) -> std::io::Result<Self> {
         use std::fs;
@@ -158,13 +154,12 @@ impl ShellLink {
             sl.set_working_dir(Some(
                 canonical.parent().unwrap().to_str().unwrap().to_string(),
             ));
-            sl.link_info = Some(_);
+            sl.link_info = None;
         }
 
         Ok(sl)
     }
 
-    #[cfg(feature = "experimental_save")]
     /// Save a shell link.
     ///
     /// Note that this doesn't save any [`ExtraData`](struct.ExtraData.html) entries.
@@ -374,7 +369,6 @@ impl ShellLink {
         &self.shell_link_header
     }
 
-    #[cfg(feature = "experimental_save")]
     /// Get a mutable instance of the shell link's header
     pub fn header_mut(&mut self) -> &mut ShellLinkHeader {
         &mut self.shell_link_header
@@ -395,7 +389,6 @@ impl ShellLink {
         &self.name_string
     }
 
-    #[cfg(feature = "experimental_save")]
     /// Set the shell link's name
     pub fn set_name(&mut self, name: Option<String>) {
         self.header_mut()
@@ -408,7 +401,6 @@ impl ShellLink {
         &self.relative_path
     }
 
-    #[cfg(feature = "experimental_save")]
     /// Set the shell link's relative path
     pub fn set_relative_path(&mut self, relative_path: Option<String>) {
         self.header_mut()
@@ -421,7 +413,6 @@ impl ShellLink {
         &self.working_dir
     }
 
-    #[cfg(feature = "experimental_save")]
     /// Set the shell link's working directory
     pub fn set_working_dir(&mut self, working_dir: Option<String>) {
         self.header_mut()
@@ -434,7 +425,6 @@ impl ShellLink {
         &self.command_line_arguments
     }
 
-    #[cfg(feature = "experimental_save")]
     /// Set the shell link's arguments
     pub fn set_arguments(&mut self, arguments: Option<String>) {
         self.header_mut()
@@ -447,7 +437,6 @@ impl ShellLink {
         &self.icon_location
     }
 
-    #[cfg(feature = "experimental_save")]
     /// Set the shell link's icon location
     pub fn set_icon_location(&mut self, icon_location: Option<String>) {
         self.header_mut()
