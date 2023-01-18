@@ -23,13 +23,11 @@
 //! ## Write Example
 //!
 //! A simple example appears as follows:
-//! ```ignore
+//! ```
 //! use lnk::ShellLink;
 //! // ...
 //! ShellLink::new_simple(std::path::Path::new(r"C:\Windows\System32\notepad.exe"));
 //! ```
-//!
-//! > **IMPORTANT!**: Writing capability is currently in a very early stage and probably won't work!
 
 use byteorder::{ByteOrder, LE};
 #[allow(unused)]
