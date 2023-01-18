@@ -1,5 +1,6 @@
 use byteorder::{ByteOrder, LE};
 use log::debug;
+use packed_struct::PackedStructSlice;
 
 use crate::linktarget::ItemID;
 
@@ -9,35 +10,36 @@ use crate::linktarget::ItemID;
 #[derive(Clone, Debug)]
 pub struct VistaAndAboveIdListDataBlock {
     /// An IDList structure (section 2.2.1).
-    id_list: Vec<ItemID>,
+    pub id_list: Vec<ItemID>,
 }
 
-impl VistaAndAboveIdListDataBlock {
-    /// Get the ID List
-    pub fn id_list(&self) -> &Vec<ItemID> {
-        &self.id_list
+impl PackedStructSlice for VistaAndAboveIdListDataBlock {
+    fn packed_bytes_size(_opt_self: Option<&Self>) -> packed_struct::PackingResult<usize> {
+        unimplemented!()
     }
-}
 
-impl From<&[u8]> for VistaAndAboveIdListDataBlock {
-    fn from(data: &[u8]) -> Self {
+    fn pack_to_slice(&self, _output: &mut [u8]) -> packed_struct::PackingResult<()> {
+        unimplemented!()
+    }
+
+    fn unpack_from_slice(src: &[u8]) -> packed_struct::PackingResult<Self> {
         let mut id_list = Vec::new();
-        let mut inner_data = &data[8..];
+        let mut inner_data = &src[8..];
         let mut offset = 0;
         loop {
             // Check for terminator
-            if LE::read_u16(&data[offset..]) == 0 {
+            if LE::read_u16(&src[offset..]) == 0 {
                 break;
             }
 
             // Read an ItemID
-            let id = ItemID::from(inner_data);
+            let id = ItemID::unpack_from_slice(inner_data)?;
             debug!("Read {:?}", id);
             let size = id.size;
             id_list.push(id);
             inner_data = &inner_data[(size as usize)..];
             offset += size as usize;
         }
-        Self { id_list }
+        Ok(Self { id_list })
     }
 }

@@ -1,7 +1,6 @@
 use bitflags::bitflags;
 use byteorder::{ByteOrder, LE};
-use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::FromPrimitive;
+use packed_struct::prelude::*;
 
 use crate::strings;
 
@@ -13,94 +12,52 @@ use crate::strings;
 /// paths, see [MS-DFSNM] section 2.2.1.4
 #[derive(Clone, Debug)]
 pub struct LinkInfo {
-    /// The parsed struct size
+    /// A 32-bit, unsigned integer that specifies the size, in bytes, of the
+    /// LinkInfo structure. All offsets specified in this structure MUST be less
+    /// than this value, and all strings contained in this structure MUST fit
+    /// within the extent defined by this size.
     pub size: u32,
     /// Flags that specify whether the VolumeID, LocalBasePath,
     /// LocalBasePathUnicode, and CommonNetworkRelativeLinkfields are present
     /// in this structure.
-    _link_info_flags: LinkInfoFlags,
+    pub link_info_flags: LinkInfoFlags,
     /// An optional VolumeID structure (section 2.3.1) that specifies
     /// information about the volume that the link target was on when the link
     /// was created. This field is present if the VolumeIDAndLocalBasePath
     /// flag is set.
-    volume_id: Option<VolumeID>,
+    pub volume_id: Option<VolumeID>,
     /// An optional, NULL–terminated string, defined by the system default code
     /// page, which is used to construct the full path to the link item or link
     /// target by appending the string in the CommonPathSuffix field. This
     /// field is present if the VolumeIDAndLocalBasePath flag is set.
-    local_base_path: Option<String>,
+    pub local_base_path: Option<String>,
     /// An optional CommonNetworkRelativeLink structure (section 2.3.2) that
     /// specifies information about the network location where the link target
     /// is stored.
-    common_network_relative_link: Option<CommonNetworkRelativeLink>,
+    pub common_network_relative_link: Option<CommonNetworkRelativeLink>,
     /// A NULL–terminated string, defined by the system default code page,
     /// which is used to construct the full path to the link item or link
     /// target by being appended to the string in the LocalBasePath field.
-    common_path_suffix: String,
+    pub common_path_suffix: String,
     /// An optional, NULL–terminated, Unicode string that is used to construct
     /// the full path to the link item or link target by appending the string
     /// in the CommonPathSuffixUnicode field. This field can be present only
     /// if the VolumeIDAndLocalBasePath flag is set and the value of the
     /// LinkInfoHeaderSize field is greater than or equal to 0x00000024.
-    local_base_path_unicode: Option<String>,
+    pub local_base_path_unicode: Option<String>,
     /// An optional, NULL–terminated, Unicode string that is used to construct
     /// the full path to the link item or link target by being appended to the
     /// string in the LocalBasePathUnicode field. This field can be present
     /// only if the value of the LinkInfoHeaderSize field is greater than or
     /// equal to 0x00000024.
-    common_path_suffix_unicode: Option<String>,
-}
-
-impl LinkInfo {
-    /// An optional VolumeID structure (section 2.3.1) that specifies
-    /// information about the volume that the link target was on when the link
-    /// was created. This field is present if the VolumeIDAndLocalBasePath
-    /// flag is set.
-    pub fn volume_id(&self) -> &Option<VolumeID> {
-        &self.volume_id
-    }
-    /// An optional, NULL–terminated string, defined by the system default code
-    /// page, which is used to construct the full path to the link item or link
-    /// target by appending the string in the CommonPathSuffix field. This
-    /// field is present if the VolumeIDAndLocalBasePath flag is set.
-    pub fn local_base_path(&self) -> &Option<String> {
-        &self.local_base_path
-    }
-    /// An optional CommonNetworkRelativeLink structure (section 2.3.2) that
-    /// specifies information about the network location where the link target
-    /// is stored.
-    pub fn common_network_relative_link(&self) -> &Option<CommonNetworkRelativeLink> {
-        &self.common_network_relative_link
-    }
-    /// A NULL–terminated string, defined by the system default code page,
-    /// which is used to construct the full path to the link item or link
-    /// target by being appended to the string in the LocalBasePath field.
-    pub fn common_path_suffix(&self) -> &String {
-        &self.common_path_suffix
-    }
-    /// An optional, NULL–terminated, Unicode string that is used to construct
-    /// the full path to the link item or link target by appending the string
-    /// in the CommonPathSuffixUnicode field. This field can be present only
-    /// if the VolumeIDAndLocalBasePath flag is set and the value of the
-    /// LinkInfoHeaderSize field is greater than or equal to 0x00000024.
-    pub fn local_base_path_unicode(&self) -> &Option<String> {
-        &self.local_base_path_unicode
-    }
-    /// An optional, NULL–terminated, Unicode string that is used to construct
-    /// the full path to the link item or link target by being appended to the
-    /// string in the LocalBasePathUnicode field. This field can be present
-    /// only if the value of the LinkInfoHeaderSize field is greater than or
-    /// equal to 0x00000024.
-    pub fn common_path_suffix_unicode(&self) -> &Option<String> {
-        &self.common_path_suffix_unicode
-    }
+    pub common_path_suffix_unicode: Option<String>,
 }
 
 impl Default for LinkInfo {
     fn default() -> Self {
         Self {
             size: 0,
-            _link_info_flags: LinkInfoFlags::empty(),
+            link_info_flags: LinkInfoFlags::empty(),
             volume_id: None,
             local_base_path: None,
             common_network_relative_link: None,
@@ -111,26 +68,34 @@ impl Default for LinkInfo {
     }
 }
 
-impl From<&[u8]> for LinkInfo {
-    fn from(data: &[u8]) -> Self {
+impl PackedStructSlice for LinkInfo {
+    fn packed_bytes_size(_opt_self: Option<&Self>) -> packed_struct::PackingResult<usize> {
+        unimplemented!()
+    }
+
+    fn pack_to_slice(&self, _output: &mut [u8]) -> packed_struct::PackingResult<()> {
+        unimplemented!()
+    }
+
+    fn unpack_from_slice(src: &[u8]) -> packed_struct::PackingResult<Self> {
         let mut link_info = Self::default();
 
-        link_info.size = LE::read_u32(data);
-        let header_size = LE::read_u32(&data[4..]);
+        link_info.size = LE::read_u32(src);
+        let header_size = LE::read_u32(&src[4..]);
         let extra_offsets_specified = header_size >= 0x24;
-        let flags = LinkInfoFlags::from_bits_truncate(LE::read_u32(&data[8..]));
-        let volume_id_offset = LE::read_u32(&data[12..]) as usize;
-        let local_base_path_offset = LE::read_u32(&data[16..]) as usize;
-        let common_network_relative_link_offset = LE::read_u32(&data[20..]) as usize;
-        let common_path_suffix_offset = LE::read_u32(&data[24..]) as usize;
+        let flags = LinkInfoFlags::from_bits_truncate(LE::read_u32(&src[8..]));
+        let volume_id_offset = LE::read_u32(&src[12..]) as usize;
+        let local_base_path_offset = LE::read_u32(&src[16..]) as usize;
+        let common_network_relative_link_offset = LE::read_u32(&src[20..]) as usize;
+        let common_path_suffix_offset = LE::read_u32(&src[24..]) as usize;
         let mut local_base_path_offset_unicode = 0;
         if extra_offsets_specified {
-            local_base_path_offset_unicode = LE::read_u32(&data[28..]) as usize;
-            let common_path_suffix_offset_unicode = LE::read_u32(&data[32..]) as usize;
+            local_base_path_offset_unicode = LE::read_u32(&src[28..]) as usize;
+            let common_path_suffix_offset_unicode = LE::read_u32(&src[32..]) as usize;
 
             if common_path_suffix_offset_unicode != 0 {
                 link_info.common_path_suffix_unicode = Some(strings::trim_nul_terminated_string(
-                    String::from_utf8_lossy(&data[common_path_suffix_offset_unicode..]).to_string(),
+                    String::from_utf8_lossy(&src[common_path_suffix_offset_unicode..]).to_string(),
                 ));
             }
         }
@@ -139,14 +104,14 @@ impl From<&[u8]> for LinkInfo {
         {
             assert_ne!(volume_id_offset, 0);
             assert_ne!(local_base_path_offset, 0);
-            link_info.volume_id = Some(VolumeID::from(&data[volume_id_offset..]));
+            link_info.volume_id = Some(VolumeID::unpack_from_slice(&src[volume_id_offset..])?);
             link_info.local_base_path = Some(strings::trim_nul_terminated_string(
-                String::from_utf8_lossy(&data[local_base_path_offset..]).to_string(),
+                String::from_utf8_lossy(&src[local_base_path_offset..]).to_string(),
             ));
 
             if local_base_path_offset_unicode != 0 {
                 link_info.local_base_path_unicode = Some(strings::trim_nul_terminated_string(
-                    String::from_utf8_lossy(&data[local_base_path_offset_unicode..]).to_string(),
+                    String::from_utf8_lossy(&src[local_base_path_offset_unicode..]).to_string(),
                 ));
             }
         }
@@ -154,21 +119,15 @@ impl From<&[u8]> for LinkInfo {
             == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX
         {
             assert_ne!(common_network_relative_link_offset, 0);
-            link_info.common_network_relative_link = Some(CommonNetworkRelativeLink::from(
-                &data[common_network_relative_link_offset..],
-            ));
+            link_info.common_network_relative_link = Some(CommonNetworkRelativeLink::unpack_from_slice(
+                &src[common_network_relative_link_offset..],
+            )?);
         }
         link_info.common_path_suffix = strings::trim_nul_terminated_string(
-            String::from_utf8_lossy(&data[common_path_suffix_offset..]).to_string(),
+            String::from_utf8_lossy(&src[common_path_suffix_offset..]).to_string(),
         );
 
-        link_info
-    }
-}
-
-impl Into<Vec<u8>> for LinkInfo {
-    fn into(self) -> Vec<u8> {
-        unimplemented!()
+        Ok(link_info)
     }
 }
 
@@ -198,6 +157,21 @@ bitflags! {
     }
 }
 
+impl PackedStruct for LinkInfoFlags {
+    type ByteArray = [u8; 4];
+
+    fn pack(&self) -> packed_struct::PackingResult<Self::ByteArray> {
+        let mut dest = [0u8; 4];
+        LE::write_u32(&mut dest, self.bits());
+        Ok(dest)
+    }
+
+    fn unpack(src: &Self::ByteArray) -> packed_struct::PackingResult<Self> {
+        let val = LE::read_u32(src);
+        Ok(Self::from_bits_truncate(val))
+    }
+}
+
 /// The VolumeID structure specifies information about the volume that a link
 /// target was on when the link was created. This information is useful for
 /// resolving the link if the file is not found in its original location.
@@ -205,29 +179,12 @@ bitflags! {
 pub struct VolumeID {
     /// A 32-bit, unsigned integer that specifies the type of drive the link
     /// target is stored on.
-    drive_type: DriveType,
+    pub drive_type: DriveType,
     /// A 32-bit, unsigned integer that specifies the drive serial number of
     /// the volume the link target is stored on.
-    drive_serial_number: u32,
+    pub drive_serial_number: u32,
     /// The label of the volume that the link target is stored on.
-    volume_label: String,
-}
-
-impl VolumeID {
-    /// A 32-bit, unsigned integer that specifies the type of drive the link
-    /// target is stored on.
-    pub fn drive_type(&self) -> &DriveType {
-        &self.drive_type
-    }
-    /// A 32-bit, unsigned integer that specifies the drive serial number of
-    /// the volume the link target is stored on.
-    pub fn drive_serial_number(&self) -> &u32 {
-        &self.drive_serial_number
-    }
-    /// The label of the volume that the link target is stored on.
-    pub fn volume_label(&self) -> &String {
-        &self.volume_label
-    }
+    pub volume_label: String,
 }
 
 impl Default for VolumeID {
@@ -240,33 +197,35 @@ impl Default for VolumeID {
     }
 }
 
-impl From<&[u8]> for VolumeID {
-    fn from(data: &[u8]) -> Self {
+impl PackedStructSlice for VolumeID {
+    fn packed_bytes_size(_opt_self: Option<&Self>) -> packed_struct::PackingResult<usize> {
+        unimplemented!()
+    }
+
+    fn pack_to_slice(&self, _output: &mut [u8]) -> packed_struct::PackingResult<()> {
+        unimplemented!()
+    }
+
+    fn unpack_from_slice(src: &[u8]) -> packed_struct::PackingResult<Self> {
         let mut volume_id = VolumeID::default();
 
-        let _size = LE::read_u32(data);
-        volume_id.drive_type = DriveType::from_u32(LE::read_u32(&data[4..])).unwrap();
-        volume_id.drive_serial_number = LE::read_u32(&data[8..]);
-        let mut volume_label_offset = LE::read_u32(&data[12..]) as usize;
+        let _size = LE::read_u32(src);
+        volume_id.drive_type = DriveType::from_primitive(LE::read_u32(&src[4..])).unwrap();
+        volume_id.drive_serial_number = LE::read_u32(&src[8..]);
+        let mut volume_label_offset = LE::read_u32(&src[12..]) as usize;
         if volume_label_offset == 0x14 {
-            volume_label_offset /* _unicode */ = LE::read_u32(&data[16..]) as usize;
+            volume_label_offset /* _unicode */ = LE::read_u32(&src[16..]) as usize;
         }
         volume_id.volume_label = strings::trim_nul_terminated_string(
-            String::from_utf8_lossy(&data[volume_label_offset..]).to_string(),
+            String::from_utf8_lossy(&src[volume_label_offset..]).to_string(),
         );
 
-        volume_id
-    }
-}
-
-impl Into<Vec<u8>> for VolumeID {
-    fn into(self) -> Vec<u8> {
-        unimplemented!()
+        Ok(volume_id)
     }
 }
 
 /// A 32-bit, unsigned integer that specifies the type of drive the link target is stored on.
-#[derive(Clone, Debug, FromPrimitive, ToPrimitive)]
+#[derive(Copy, Clone, Debug, PrimitiveEnum_u32)]
 pub enum DriveType {
     /// The drive type cannot be determined.
     DriveUnknown = 0x00,
@@ -328,44 +287,48 @@ impl Default for CommonNetworkRelativeLink {
     }
 }
 
-impl From<&[u8]> for CommonNetworkRelativeLink {
-    fn from(data: &[u8]) -> Self {
+impl PackedStructSlice for CommonNetworkRelativeLink {
+    fn packed_bytes_size(_opt_self: Option<&Self>) -> packed_struct::PackingResult<usize> {
+        unimplemented!()
+    }
+
+    fn pack_to_slice(&self, _output: &mut [u8]) -> packed_struct::PackingResult<()> {
+        unimplemented!()
+    }
+
+    fn unpack_from_slice(src: &[u8]) -> packed_struct::PackingResult<Self> {
         let mut link = CommonNetworkRelativeLink::default();
 
-        let size = LE::read_u32(data);
-        assert!(size >= 0x14);
-        link.flags = CommonNetworkRelativeLinkFlags::from_bits_truncate(LE::read_u32(&data[4..]));
-        let net_name_offset = LE::read_u32(&data[8..]) as usize;
-        let device_name_offset = LE::read_u32(&data[12..]) as usize;
+        let size = LE::read_u32(src);
+        if size < 0x14 {
+            return Err(PackingError::InvalidValue);
+        }
+        link.flags = CommonNetworkRelativeLinkFlags::from_bits_truncate(LE::read_u32(&src[4..]));
+        let net_name_offset = LE::read_u32(&src[8..]) as usize;
+        let device_name_offset = LE::read_u32(&src[12..]) as usize;
         if link.flags & CommonNetworkRelativeLinkFlags::VALID_NET_TYPE
             == CommonNetworkRelativeLinkFlags::VALID_NET_TYPE
         {
-            link.network_provider_type = NetworkProviderType::from_u32(LE::read_u32(&data[16..]));
+            link.network_provider_type = NetworkProviderType::from_primitive(LE::read_u32(&src[16..]));
         }
         link.net_name = strings::trim_nul_terminated_string(
-            String::from_utf8_lossy(&data[net_name_offset..]).to_string(),
+            String::from_utf8_lossy(&src[net_name_offset..]).to_string(),
         );
         link.device_name = strings::trim_nul_terminated_string(
-            String::from_utf8_lossy(&data[device_name_offset..]).to_string(),
+            String::from_utf8_lossy(&src[device_name_offset..]).to_string(),
         );
         if net_name_offset >= 0x14 {
-            let net_name_offset_unicode = LE::read_u32(&data[20..]) as usize;
-            let device_name_offset_unicode = LE::read_u32(&data[24..]) as usize;
+            let net_name_offset_unicode = LE::read_u32(&src[20..]) as usize;
+            let device_name_offset_unicode = LE::read_u32(&src[24..]) as usize;
             link.net_name_unicode = Some(strings::trim_nul_terminated_string(
-                String::from_utf8_lossy(&data[net_name_offset_unicode..]).to_string(),
+                String::from_utf8_lossy(&src[net_name_offset_unicode..]).to_string(),
             ));
             link.device_name_unicode = Some(strings::trim_nul_terminated_string(
-                String::from_utf8_lossy(&data[device_name_offset_unicode..]).to_string(),
+                String::from_utf8_lossy(&src[device_name_offset_unicode..]).to_string(),
             ));
         }
 
-        link
-    }
-}
-
-impl Into<Vec<u8>> for CommonNetworkRelativeLink {
-    fn into(self) -> Vec<u8> {
-        unimplemented!()
+        Ok(link)
     }
 }
 
@@ -383,9 +346,24 @@ bitflags! {
     }
 }
 
+impl PackedStruct for CommonNetworkRelativeLinkFlags {
+    type ByteArray = [u8; 4];
+
+    fn pack(&self) -> packed_struct::PackingResult<Self::ByteArray> {
+        let mut dest = [0u8; 4];
+        LE::write_u32(&mut dest, self.bits());
+        Ok(dest)
+    }
+
+    fn unpack(src: &Self::ByteArray) -> packed_struct::PackingResult<Self> {
+        let val = LE::read_u32(src);
+        Ok(Self::from_bits_truncate(val))
+    }
+}
+
 /// A 32-bit, unsigned integer that specifies the type of network provider.
 #[allow(missing_docs)]
-#[derive(Clone, Debug, FromPrimitive, ToPrimitive)]
+#[derive(Copy, Clone, Debug, PrimitiveEnum_u32)]
 pub enum NetworkProviderType {
     Avid = 0x1a0000,
     Docuspace = 0x1b0000,

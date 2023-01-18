@@ -1,6 +1,7 @@
 use byteorder::{ByteOrder, LE};
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
+use packed_struct::PackedStructSlice;
 
 use self::{
     console_data::ConsoleDataBlock, console_fe_data::ConsoleFEDataBlock,
@@ -90,26 +91,34 @@ pub enum ExtraData {
     VistaAndAboveIdListProps(VistaAndAboveIdListDataBlock),
 }
 
-impl From<&[u8]> for ExtraData {
-    fn from(data: &[u8]) -> Self {
-        let size = LE::read_u32(data) as usize;
-        let sig = LE::read_u32(&data[4..]);
-        debug!("Signature {:x}", sig);
-        let data = &data[8..size];
+impl PackedStructSlice for ExtraData {
+    fn packed_bytes_size(_opt_self: Option<&Self>) -> packed_struct::PackingResult<usize> {
+        unimplemented!()
+    }
 
-        match sig {
-            0xa0000002 => Self::ConsoleProps(ConsoleDataBlock::from(data)),
-            0xa0000004 => Self::ConsoleFeProps(ConsoleFEDataBlock::from(data)),
-            0xa0000006 => Self::DarwinProps(DarwinDataBlock::from(data)),
-            0xa0000001 => Self::EnvironmentProps(EnvironmentVariableDataBlock::from(data)),
-            0xa0000007 => Self::IconEnvironmentProps(IconEnvironmentDataBlock::from(data)),
-            0xa000000b => Self::KnownFolderProps(KnownFolderDataBlock::from(data)),
-            0xa0000009 => Self::PropertyStoreProps(PropertyStoreDataBlock::from(data)),
-            0xa0000008 => Self::ShimProps(ShimDataBlock::from(data)),
-            0xa0000005 => Self::SpecialFolderProps(SpecialFolderDataBlock::from(data)),
-            0xa0000003 => Self::TrackerProps(TrackerDataBlock::from(data)),
-            0xa000000a => Self::VistaAndAboveIdListProps(VistaAndAboveIdListDataBlock::from(data)),
+    fn pack_to_slice(&self, _output: &mut [u8]) -> packed_struct::PackingResult<()> {
+        unimplemented!()
+    }
+
+    fn unpack_from_slice(src: &[u8]) -> packed_struct::PackingResult<Self> {
+        let size = LE::read_u32(src) as usize;
+        let sig = LE::read_u32(&src[4..]);
+        debug!("Signature {:x}", sig);
+        let data = &src[8..size];
+
+        Ok(match sig {
+            0xa0000002 => Self::ConsoleProps(ConsoleDataBlock::unpack_from_slice(data)?),
+            0xa0000004 => Self::ConsoleFeProps(ConsoleFEDataBlock::unpack_from_slice(data)?),
+            0xa0000006 => Self::DarwinProps(DarwinDataBlock::unpack_from_slice(data)?),
+            0xa0000001 => Self::EnvironmentProps(EnvironmentVariableDataBlock::unpack_from_slice(data)?),
+            0xa0000007 => Self::IconEnvironmentProps(IconEnvironmentDataBlock::unpack_from_slice(data)?),
+            0xa000000b => Self::KnownFolderProps(KnownFolderDataBlock::unpack_from_slice(data)?),
+            0xa0000009 => Self::PropertyStoreProps(PropertyStoreDataBlock::unpack_from_slice(data)?),
+            0xa0000008 => Self::ShimProps(ShimDataBlock::unpack_from_slice(data)?),
+            0xa0000005 => Self::SpecialFolderProps(SpecialFolderDataBlock::unpack_from_slice(data)?),
+            0xa0000003 => Self::TrackerProps(TrackerDataBlock::unpack_from_slice(data)?),
+            0xa000000a => Self::VistaAndAboveIdListProps(VistaAndAboveIdListDataBlock::unpack_from_slice(data)?),
             _ => panic!("Invalid extra data type!"),
-        }
+        })
     }
 }

@@ -1,3 +1,5 @@
+use packed_struct::PackedStructSlice;
+
 use crate::strings;
 
 /// The DarwinDataBlock structure specifies an application identifier
@@ -8,41 +10,34 @@ pub struct DarwinDataBlock {
     /// A NULL–terminated string, defined by the system default code
     /// page, which specifies an application identifier. This field
     /// SHOULD be ignored.
-    darwin_data_ansi: String,
+    pub darwin_data_ansi: String,
     /// An optional, NULL–terminated, Unicode string that specifies
     /// an application identifier.
-    darwin_data_unicode: Option<String>,
+    pub darwin_data_unicode: Option<String>,
 }
 
-impl DarwinDataBlock {
-    /// A NULL–terminated string, defined by the system default code
-    /// page, which specifies an application identifier. This field
-    /// SHOULD be ignored.
-    pub fn darwin_data_ansi(&self) -> &String {
-        &self.darwin_data_ansi
+impl PackedStructSlice for DarwinDataBlock {
+    fn packed_bytes_size(_opt_self: Option<&Self>) -> packed_struct::PackingResult<usize> {
+        unimplemented!()
     }
 
-    /// An optional, NULL–terminated, Unicode string that specifies
-    /// an application identifier.
-    pub fn darwin_data_unicode(&self) -> &Option<String> {
-        &self.darwin_data_unicode
+    fn pack_to_slice(&self, _output: &mut [u8]) -> packed_struct::PackingResult<()> {
+        unimplemented!()
     }
-}
 
-impl From<&[u8]> for DarwinDataBlock {
-    fn from(data: &[u8]) -> Self {
+    fn unpack_from_slice(src: &[u8]) -> packed_struct::PackingResult<Self> {
         let darwin_data_ansi =
-            strings::trim_nul_terminated_string(String::from_utf8_lossy(&data[0..260]));
+            strings::trim_nul_terminated_string(String::from_utf8_lossy(&src[0..260]));
         let darwin_data_unicode_raw =
-            strings::trim_nul_terminated_string(String::from_utf8_lossy(&data[260..520]));
+            strings::trim_nul_terminated_string(String::from_utf8_lossy(&src[260..520]));
         let darwin_data_unicode = if darwin_data_unicode_raw.len() == 0 {
             None
         } else {
             Some(darwin_data_unicode_raw)
         };
-        Self {
+        Ok(Self {
             darwin_data_ansi,
             darwin_data_unicode,
-        }
+        })
     }
 }

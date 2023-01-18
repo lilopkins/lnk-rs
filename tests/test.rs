@@ -14,7 +14,7 @@ fn test_lnk_header() {
     debug!("{:#?}", shortcut);
 
     assert_eq!(
-        *shortcut.header().link_flags(),
+        shortcut.header.link_flags,
         LinkFlags::HAS_LINK_TARGET_ID_LIST
             | LinkFlags::HAS_LINK_INFO
             | LinkFlags::HAS_RELATIVE_PATH
@@ -25,45 +25,45 @@ fn test_lnk_header() {
     );
 
     assert_eq!(
-        *shortcut.header().file_attributes(),
+        shortcut.header.file_attributes,
         FileAttributeFlags::FILE_ATTRIBUTE_ARCHIVE,
         "File attributes should be parsed correctly"
     );
 
     assert_eq!(
-        shortcut.header().creation_time().datetime().date(),
+        shortcut.header.creation_time.datetime().date(),
         NaiveDate::from_ymd_opt(2008, 09, 12).unwrap(),
         "Creation time should be parsed correctly"
     );
     assert_eq!(
-        shortcut.header().access_time().datetime().date(),
+        shortcut.header.access_time.datetime().date(),
         NaiveDate::from_ymd_opt(2008, 09, 12).unwrap(),
         "Access time should be parsed correctly"
     );
     assert_eq!(
-        shortcut.header().write_time().datetime().date(),
+        shortcut.header.write_time.datetime().date(),
         NaiveDate::from_ymd_opt(2008, 09, 12).unwrap(),
         "Write time should be parsed correctly"
     );
 
     assert_eq!(
-        shortcut.header().file_size(),
+        shortcut.header.file_size,
         0x00,
         "File size should be parsed correctly"
     );
     assert_eq!(
-        shortcut.header().icon_index(),
+        shortcut.header.icon_index,
         0x00,
         "Icon index should be parsed correctly"
     );
     assert_eq!(
-        *shortcut.header().show_command(),
+        shortcut.header.show_command,
         ShowCommand::ShowNormal,
         "Show command should be parsed correctly"
     );
-    assert_eq!(*shortcut.header().hotkey().key(), HotkeyKey::NoKeyAssigned);
+    assert_eq!(shortcut.header.hotkey.key, HotkeyKey::NoKeyAssigned);
     assert_eq!(
-        *shortcut.header().hotkey().modifiers(),
+        shortcut.header.hotkey.modifiers,
         HotkeyModifiers::NO_MODIFIER
     );
 

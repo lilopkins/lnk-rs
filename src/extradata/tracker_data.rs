@@ -1,4 +1,5 @@
 use byteorder::{ByteOrder, LE};
+use packed_struct::prelude::PackedStruct;
 
 use crate::strings;
 
@@ -11,46 +12,35 @@ pub struct TrackerDataBlock {
     /// A NULL–terminated character string, as defined by the system default
     /// code page, which specifies the NetBIOS name of the machine where
     /// the link target was last known to reside.
-    machine_id: String,
+    pub machine_id: String,
     /// Two values in GUID packet representation ([MS-DTYP] section 2.3.4.2)
     /// that are used to find the link target with the Link Tracking service,
     /// as described in [MS-DLTW].
-    droid: [u128; 2],
+    pub droid: [u128; 2],
     /// Two values in GUID packet representation that are used to find the
     /// link target with the Link Tracking service
-    droid_birth: [u128; 2],
+    pub droid_birth: [u128; 2],
 }
 
-impl TrackerDataBlock {
-    /// Get the machine ID
-    pub fn machine_id(&self) -> &String {
-        &self.machine_id
+impl PackedStruct for TrackerDataBlock {
+    type ByteArray = [u8; 88];
+
+    fn pack(&self) -> packed_struct::PackingResult<Self::ByteArray> {
+        unimplemented!()
     }
 
-    /// Get the droid GUIDs
-    pub fn droid(&self) -> &[u128; 2] {
-        &self.droid
-    }
-
-    /// Get the droid birth GUIDs
-    pub fn droid_birth(&self) -> &[u128; 2] {
-        &self.droid_birth
-    }
-}
-
-impl From<&[u8]> for TrackerDataBlock {
-    fn from(data: &[u8]) -> Self {
+    fn unpack(src: &Self::ByteArray) -> packed_struct::PackingResult<Self> {
         let machine_id =
-            strings::trim_nul_terminated_string(String::from_utf8_lossy(&data[8..]).to_string());
-        let droid_1 = LE::read_u128(&data[24..]);
-        let droid_2 = LE::read_u128(&data[40..]);
-        let droid_birth_1 = LE::read_u128(&data[56..]);
-        let droid_birth_2 = LE::read_u128(&data[72..]);
+            strings::trim_nul_terminated_string(String::from_utf8_lossy(&src[8..]).to_string());
+        let droid_1 = LE::read_u128(&src[24..]);
+        let droid_2 = LE::read_u128(&src[40..]);
+        let droid_birth_1 = LE::read_u128(&src[56..]);
+        let droid_birth_2 = LE::read_u128(&src[72..]);
 
-        Self {
+        Ok(Self {
             machine_id,
             droid: [droid_1, droid_2],
             droid_birth: [droid_birth_1, droid_birth_2],
-        }
+        })
     }
 }

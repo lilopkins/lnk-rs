@@ -12,8 +12,9 @@ fn create_read_blank() {
         info!("Saving shortcut...");
         let mut shortcut = lnk::ShellLink::default();
         shortcut
-            .header_mut()
-            .update_link_flags(lnk::LinkFlags::IS_UNICODE, *is_unicode);
+            .header
+            .link_flags
+            .set(lnk::LinkFlags::IS_UNICODE, *is_unicode);
         shortcut.set_name(Some("Blank name".to_string()));
         shortcut
             .save(TEST_FILE_NAME)

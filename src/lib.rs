@@ -34,8 +34,8 @@
 use byteorder::{ByteOrder, LE};
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
+use packed_struct::prelude::*;
 
-use std::convert::TryFrom;
 use std::fs::File;
 use std::io::{prelude::*, BufReader, BufWriter};
 use std::path::{Path, PathBuf};
@@ -79,6 +79,8 @@ pub enum Error {
     IoError(std::io::Error),
     /// The parsed file isn't a shell link.
     NotAShellLinkError,
+    /// The data couldn't be packed for saving, or unpacked for reading.
+    PackingError(PackingError),
 }
 
 impl From<std::io::Error> for Error {
@@ -87,10 +89,17 @@ impl From<std::io::Error> for Error {
     }
 }
 
+impl From<PackingError> for Error {
+    fn from(e: PackingError) -> Self {
+        Error::PackingError(e)
+    }
+}
+
 /// A shell link
 #[derive(Clone, Debug)]
 pub struct ShellLink {
-    shell_link_header: header::ShellLinkHeader,
+    /// Header data for this ShellLink
+    pub header: header::ShellLinkHeader,
     linktarget_id_list: Option<linktarget::LinkTargetIdList>,
     link_info: Option<linkinfo::LinkInfo>,
     name_string: Option<String>,
@@ -98,7 +107,8 @@ pub struct ShellLink {
     working_dir: Option<String>,
     command_line_arguments: Option<String>,
     icon_location: Option<String>,
-    _extra_data: Vec<extradata::ExtraData>,
+    /// Extra data fields for this link.
+    pub extra_data: Vec<extradata::ExtraData>,
 }
 
 impl Default for ShellLink {
@@ -107,7 +117,7 @@ impl Default for ShellLink {
     /// suggest you look at the [`ShellLink::new_simple`] method.
     fn default() -> Self {
         Self {
-            shell_link_header: header::ShellLinkHeader::default(),
+            header: header::ShellLinkHeader::default(),
             linktarget_id_list: None,
             link_info: None,
             name_string: None,
@@ -115,7 +125,7 @@ impl Default for ShellLink {
             working_dir: None,
             command_line_arguments: None,
             icon_location: None,
-            _extra_data: vec![],
+            extra_data: vec![],
         }
     }
 }
@@ -138,15 +148,14 @@ impl ShellLink {
         let mut sl = Self::default();
 
         let mut flags = LinkFlags::IS_UNICODE;
-        sl.header_mut().set_link_flags(flags);
+        sl.header.link_flags = flags;
         if meta.is_dir() {
-            sl.header_mut()
-                .set_file_attributes(FileAttributeFlags::FILE_ATTRIBUTE_DIRECTORY);
+            sl.header.file_attributes = FileAttributeFlags::FILE_ATTRIBUTE_DIRECTORY;
         } else {
             flags |= LinkFlags::HAS_WORKING_DIR
                 | LinkFlags::HAS_RELATIVE_PATH
                 | LinkFlags::HAS_LINK_INFO;
-            sl.header_mut().set_link_flags(flags);
+            sl.header.link_flags = flags;
             sl.set_relative_path(Some(format!(
                 ".\\{}",
                 canonical.file_name().unwrap().to_str().unwrap()
@@ -163,21 +172,21 @@ impl ShellLink {
     /// Save a shell link.
     ///
     /// Note that this doesn't save any [`ExtraData`](struct.ExtraData.html) entries.
-    pub fn save<P: AsRef<std::path::Path>>(&self, path: P) -> std::io::Result<()> {
+    pub fn save<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), Error> {
         let mut w = BufWriter::new(File::create(path)?);
 
         debug!("Writing header...");
-        let header_data: [u8; 0x4c] = self.shell_link_header.into();
+        let header_data: [u8; 0x4c] = self.header.pack()?;
         w.write_all(&header_data)?;
 
-        let link_flags = *self.header().link_flags();
+        let link_flags = self.header.link_flags;
 
         if link_flags.contains(LinkFlags::HAS_LINK_TARGET_ID_LIST) {
             if let None = self.linktarget_id_list {
                 error!("LinkTargetIDList not specified but expected!")
             }
             debug!("A LinkTargetIDList is marked as present. Writing.");
-            let mut data: Vec<u8> = self.linktarget_id_list.clone().unwrap().into();
+            let mut data: Vec<u8> = self.linktarget_id_list.clone().unwrap().pack_to_vec()?;
             w.write_all(&mut data)?;
         }
 
@@ -186,7 +195,7 @@ impl ShellLink {
                 error!("LinkInfo not specified but expected!")
             }
             debug!("LinkInfo is marked as present. Writing.");
-            let mut data: Vec<u8> = self.link_info.clone().unwrap().into();
+            let mut data: Vec<u8> = self.link_info.clone().unwrap().pack_to_vec()?;
             w.write_all(&mut data)?;
         }
 
@@ -260,17 +269,17 @@ impl ShellLink {
         if data.len() < 0x4c {
             return Err(Error::NotAShellLinkError);
         }
-        let shell_link_header = header::ShellLinkHeader::try_from(&data[0..0x4c])?;
+        let shell_link_header = header::ShellLinkHeader::unpack_from_slice(&data[0..0x4c])?;
         debug!("Shell header: {:#?}", shell_link_header);
 
         let mut cursor = 0x4c;
 
         let mut linktarget_id_list = None;
-        let link_flags = *shell_link_header.link_flags();
+        let link_flags = shell_link_header.link_flags;
         if link_flags.contains(LinkFlags::HAS_LINK_TARGET_ID_LIST) {
             debug!("A LinkTargetIDList is marked as present. Parsing now.");
             debug!("Cursor position: 0x{:x}", cursor);
-            let list = linktarget::LinkTargetIdList::from(&data[cursor..]);
+            let list = linktarget::LinkTargetIdList::unpack_from_slice(&data[cursor..])?;
             debug!("{:?}", list);
             cursor += list.size as usize + 2; // add LinkTargetSize size
             linktarget_id_list = Some(list);
@@ -280,7 +289,7 @@ impl ShellLink {
         if link_flags.contains(LinkFlags::HAS_LINK_INFO) {
             debug!("LinkInfo is marked as present. Parsing now.");
             debug!("Cursor position: 0x{:x}", cursor);
-            let info = linkinfo::LinkInfo::from(&data[cursor..]);
+            let info = linkinfo::LinkInfo::unpack_from_slice(&data[cursor..])?;
             debug!("{:?}", info);
             cursor += info.size as usize;
             link_info = Some(info);
@@ -345,14 +354,14 @@ impl ShellLink {
             if query < 0x04 {
                 break;
             }
-            extra_data.push(extradata::ExtraData::from(&data[cursor..]));
+            extra_data.push(extradata::ExtraData::unpack_from_slice(&data[cursor..])?);
             cursor += query as usize;
         }
 
         let _remaining_data = &data[cursor..];
 
         Ok(Self {
-            shell_link_header,
+            header: shell_link_header,
             linktarget_id_list,
             link_info,
             name_string,
@@ -360,28 +369,8 @@ impl ShellLink {
             working_dir,
             command_line_arguments,
             icon_location,
-            _extra_data: extra_data,
+            extra_data,
         })
-    }
-
-    /// Get the header of the shell link
-    pub fn header(&self) -> &ShellLinkHeader {
-        &self.shell_link_header
-    }
-
-    /// Get a mutable instance of the shell link's header
-    pub fn header_mut(&mut self) -> &mut ShellLinkHeader {
-        &mut self.shell_link_header
-    }
-
-    /// Get the link target ID List
-    pub fn link_target_id_list(&self) -> &Option<LinkTargetIdList> {
-        &self.linktarget_id_list
-    }
-
-    /// Get the link info structure
-    pub fn link_info(&self) -> &Option<LinkInfo> {
-        &self.link_info
     }
 
     /// Get the shell link's name, if set
@@ -391,8 +380,9 @@ impl ShellLink {
 
     /// Set the shell link's name
     pub fn set_name(&mut self, name: Option<String>) {
-        self.header_mut()
-            .update_link_flags(LinkFlags::HAS_NAME, name.is_some());
+        self.header
+            .link_flags
+            .set(LinkFlags::HAS_NAME, name.is_some());
         self.name_string = name;
     }
 
@@ -403,8 +393,9 @@ impl ShellLink {
 
     /// Set the shell link's relative path
     pub fn set_relative_path(&mut self, relative_path: Option<String>) {
-        self.header_mut()
-            .update_link_flags(LinkFlags::HAS_RELATIVE_PATH, relative_path.is_some());
+        self.header
+            .link_flags
+            .set(LinkFlags::HAS_RELATIVE_PATH, relative_path.is_some());
         self.relative_path = relative_path;
     }
 
@@ -415,8 +406,9 @@ impl ShellLink {
 
     /// Set the shell link's working directory
     pub fn set_working_dir(&mut self, working_dir: Option<String>) {
-        self.header_mut()
-            .update_link_flags(LinkFlags::HAS_WORKING_DIR, working_dir.is_some());
+        self.header
+            .link_flags
+            .set(LinkFlags::HAS_WORKING_DIR, working_dir.is_some());
         self.working_dir = working_dir;
     }
 
@@ -427,8 +419,9 @@ impl ShellLink {
 
     /// Set the shell link's arguments
     pub fn set_arguments(&mut self, arguments: Option<String>) {
-        self.header_mut()
-            .update_link_flags(LinkFlags::HAS_ARGUMENTS, arguments.is_some());
+        self.header
+            .link_flags
+            .set(LinkFlags::HAS_ARGUMENTS, arguments.is_some());
         self.command_line_arguments = arguments;
     }
 
@@ -439,8 +432,35 @@ impl ShellLink {
 
     /// Set the shell link's icon location
     pub fn set_icon_location(&mut self, icon_location: Option<String>) {
-        self.header_mut()
-            .update_link_flags(LinkFlags::HAS_ICON_LOCATION, icon_location.is_some());
+        self.header
+            .link_flags
+            .set(LinkFlags::HAS_ICON_LOCATION, icon_location.is_some());
         self.icon_location = icon_location;
+    }
+
+    /// Get the shell link's LinkTargetIdList, if set
+    pub fn linktarget_id_list(&self) -> &Option<linktarget::LinkTargetIdList> {
+        &self.linktarget_id_list
+    }
+
+    /// Set the shell link's LinkTargetIdList
+    pub fn set_linktarget_id_list(&mut self, linktarget_id_list: Option<linktarget::LinkTargetIdList>) {
+        self.header
+            .link_flags
+            .set(LinkFlags::HAS_LINK_TARGET_ID_LIST, linktarget_id_list.is_some());
+        self.linktarget_id_list = linktarget_id_list;
+    }
+
+    /// Get the shell link's LinkInfo, if set
+    pub fn link_info(&self) -> &Option<linkinfo::LinkInfo> {
+        &self.link_info
+    }
+
+    /// Set the shell link's LinkInfo
+    pub fn set_link_info(&mut self, link_info: Option<linkinfo::LinkInfo>) {
+        self.header
+            .link_flags
+            .set(LinkFlags::HAS_LINK_INFO, link_info.is_some());
+        self.link_info = link_info;
     }
 }

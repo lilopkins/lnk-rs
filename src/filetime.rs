@@ -1,11 +1,13 @@
 use std::fmt;
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
+use packed_struct::prelude::*;
 
 /// The FILETIME structure is a 64-bit value that represents the number of
 /// 100-nanosecond intervals that have elapsed since January 1, 1601,
 /// Coordinated Universal Time (UTC).
-#[derive(Clone, Copy)]
+#[derive(PackedStruct, Clone, Copy)]
+#[packed_struct(endian = "lsb")]
 pub struct FileTime {
     low_date_time: u32,
     high_date_time: u32,

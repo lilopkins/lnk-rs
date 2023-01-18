@@ -1,155 +1,75 @@
+use std::fmt;
+
 use bitflags::bitflags;
 use byteorder::{ByteOrder, LE};
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-
-use std::convert::TryFrom;
+use packed_struct::prelude::*;
 
 use crate::FileTime;
 
-const CLSID: u128 = 0x460000000000_00c0_0000_0000_00021401;
+const CLSID: u128 = 0x460000000000_000c_0000_0000_00021401;
 
 /// A ShellLinkHeader structure (section 2.1), which contains identification
 /// information, timestamps, and flags that specify the presence of optional
 /// structures.
-#[derive(Clone, Copy, Debug)]
+#[derive(PackedStruct, Clone, Copy, Debug)]
+#[packed_struct(endian = "lsb")]
 pub struct ShellLinkHeader {
+    /// The size, in bytes, of this structure. This value MUST be 0x0000004C.
+    _header_size: u32,
+    /// A class identifier (CLSID). This value MUST be 00021401-0000-0000-C000-000000000046.
+    #[packed_field(size_bytes = "16")]
+    _clsid: GUID,
     /// A LinkFlags structure (section 2.1.1) that specifies information about the shell link and
     /// the presence of optional portions of the structure.
-    link_flags: LinkFlags,
+    #[packed_field(size_bytes = "4")]
+    pub link_flags: LinkFlags,
     /// A FileAttributesFlags structure (section 2.1.2) that specifies information about the link
     /// target.
-    file_attributes: FileAttributeFlags,
+    #[packed_field(size_bytes = "4")]
+    pub file_attributes: FileAttributeFlags,
     /// A FILETIME structure ([MS-DTYP]section 2.3.3) that specifies the creation time of the link
     /// target in UTC (Coordinated Universal Time). If the value is zero, there is no creation time
     /// set on the link target.
-    creation_time: FileTime,
+    #[packed_field(size_bytes = "8")]
+    pub creation_time: FileTime,
     /// A FILETIME structure ([MS-DTYP] section2.3.3) that specifies the access time of the link
     /// target in UTC (Coordinated Universal Time). If the value is zero, there is no access time
     /// set on the link target.
-    access_time: FileTime,
+    #[packed_field(size_bytes = "8")]
+    pub access_time: FileTime,
     /// A FILETIME structure ([MS-DTYP] section 2.3.3) that specifies the write time of the link
     /// target in UTC (Coordinated Universal Time). If the value is zero, there is no write time
     /// set on the link target.
-    write_time: FileTime,
+    #[packed_field(size_bytes = "8")]
+    pub write_time: FileTime,
     /// A 32-bit unsigned integer that specifies the size, in bytes, of the link target. If the
     /// link target fileis larger than 0xFFFFFFFF, this value specifies the least significant 32
     /// bits of the link target file size.
-    file_size: u32,
+    pub file_size: u32,
     /// A 32-bit signed integer that specifies the index of an icon within a given icon location.
-    icon_index: i32,
+    pub icon_index: i32,
     /// A 32-bit unsigned integer that specifies the expected window state of an application
     /// launched by the link.
-    show_command: ShowCommand,
+    #[packed_field(size_bytes = "4", ty = "enum")]
+    pub show_command: ShowCommand,
     /// A HotkeyFlags structure (section 2.1.3) that specifies the keystrokes used to launch the
     /// application referenced by the shortcut key. This value is assigned to the application after
     /// it is launched, so that pressing the key activates that application.
-    hotkey: HotkeyFlags,
-}
-
-impl ShellLinkHeader {
-    /// Get the link flags
-    pub fn link_flags(&self) -> &LinkFlags {
-        &self.link_flags
-    }
-
-    /// Set the link flags
-    pub fn set_link_flags(&mut self, link_flags: LinkFlags) {
-        self.link_flags = link_flags;
-    }
-
-    /// Set some link flags
-    pub fn update_link_flags(&mut self, link_flags: LinkFlags, value: bool) {
-        self.link_flags.set(link_flags, value);
-    }
-
-    /// Get the file attributes
-    pub fn file_attributes(&self) -> &FileAttributeFlags {
-        &self.file_attributes
-    }
-
-    /// Set the file attributes
-    pub fn set_file_attributes(&mut self, file_attributes: FileAttributeFlags) {
-        self.file_attributes = file_attributes;
-    }
-
-    /// Get the file creation time
-    pub fn creation_time(&self) -> FileTime {
-        self.creation_time
-    }
-
-    /// Set the file creation time
-    pub fn set_creation_time(&mut self, creation_time: FileTime) {
-        self.creation_time = creation_time;
-    }
-
-    /// Get the file access time
-    pub fn access_time(&self) -> FileTime {
-        self.access_time
-    }
-
-    /// Set the file access time
-    pub fn set_access_time(&mut self, access_time: FileTime) {
-        self.access_time = access_time;
-    }
-
-    /// Get the file write time
-    pub fn write_time(&self) -> FileTime {
-        self.write_time
-    }
-
-    /// Set the file write time
-    pub fn set_write_time(&mut self, write_time: FileTime) {
-        self.write_time = write_time;
-    }
-
-    /// The file size, or at least the least significant 32-bits of the
-    /// size
-    pub fn file_size(&self) -> u32 {
-        self.file_size
-    }
-
-    /// Set the file size, or if bigger then 32-bits, set the least
-    /// significant 32-bits
-    pub fn set_file_size(&mut self, file_size: u32) {
-        self.file_size = file_size;
-    }
-
-    /// Get the icon index
-    pub fn icon_index(&self) -> i32 {
-        self.icon_index
-    }
-
-    /// Set the icon index
-    pub fn set_icon_index(&mut self, icon_index: i32) {
-        self.icon_index = icon_index;
-    }
-
-    /// Get the show command
-    pub fn show_command(&self) -> &ShowCommand {
-        &self.show_command
-    }
-
-    /// Set the shortcut show command
-    pub fn set_show_command(&mut self, show_command: ShowCommand) {
-        self.show_command = show_command;
-    }
-
-    /// Get the hotkey flags
-    pub fn hotkey(&self) -> &HotkeyFlags {
-        &self.hotkey
-    }
-
-    /// Get a mutable pointer to the hotkey flags
-    pub fn hotkey_mut(&mut self) -> &mut HotkeyFlags {
-        &mut self.hotkey
-    }
+    #[packed_field(size_bytes = "2")]
+    pub hotkey: HotkeyFlags,
+    /// A value that MUST be zero.
+    _reserved_1: ReservedZero<packed_bits::Bits<16>>,
+    /// A value that MUST be zero.
+    _reserved_2: ReservedZero<packed_bits::Bits<32>>,
+    /// A value that MUST be zero.
+    _reserved_3: ReservedZero<packed_bits::Bits<32>>,
 }
 
 impl Default for ShellLinkHeader {
-    /// Create a new, blank, ShellLinkHeader
     fn default() -> Self {
         Self {
+            _header_size: 0x4c,
+            _clsid: GUID(CLSID),
             link_flags: LinkFlags::IS_UNICODE,
             file_attributes: FileAttributeFlags::FILE_ATTRIBUTE_NORMAL,
             creation_time: FileTime::now(),
@@ -158,58 +78,37 @@ impl Default for ShellLinkHeader {
             file_size: 0,
             icon_index: 0,
             show_command: ShowCommand::ShowNormal,
-            hotkey: HotkeyFlags::new(HotkeyKey::NoKeyAssigned, HotkeyModifiers::NO_MODIFIER),
+            hotkey: HotkeyFlags {
+                key: HotkeyKey::NoKeyAssigned,
+                modifiers: HotkeyModifiers::NO_MODIFIER,
+            },
+            _reserved_1: Default::default(),
+            _reserved_2: Default::default(),
+            _reserved_3: Default::default(),
         }
     }
 }
 
-impl Into<[u8; 0x4c]> for ShellLinkHeader {
-    /// Write the data in this header to a `[u8]` for writing to the output file.
-    fn into(self) -> [u8; 0x4c] {
-        let mut header_data = [0u8; 0x4c];
-        LE::write_u32(&mut header_data[0..], 0x4c);
-        LE::write_u128(&mut header_data[4..], CLSID);
-        LE::write_u32(&mut header_data[20..], self.link_flags.bits);
-        LE::write_u32(&mut header_data[24..], self.file_attributes.bits);
-        LE::write_u64(&mut header_data[28..], self.creation_time.into());
-        LE::write_u64(&mut header_data[36..], self.access_time.into());
-        LE::write_u64(&mut header_data[44..], self.write_time.into());
-        LE::write_u32(&mut header_data[52..], self.file_size);
-        LE::write_i32(&mut header_data[56..], self.icon_index);
-        LE::write_u32(&mut header_data[60..], self.show_command as u32);
-        LE::write_u16(&mut header_data[64..], self.hotkey.to_flags_u16());
-        LE::write_u16(&mut header_data[66..], 0);
-        LE::write_u32(&mut header_data[68..], 0);
-        LE::write_u32(&mut header_data[72..], 0);
-        header_data
+#[derive(Clone, Copy)]
+struct GUID(u128);
+
+impl fmt::Debug for GUID {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:x}", self.0)
     }
 }
 
-impl TryFrom<&[u8]> for ShellLinkHeader {
-    type Error = crate::Error;
+impl PackedStruct for GUID {
+    type ByteArray = [u8; 16];
 
-    /// Read data into this struct from a `[u8]`.
-    /// Returns an error when the magic number is not valid.
-    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
-        let mut header = Self::default();
+    fn pack(&self) -> packed_struct::PackingResult<Self::ByteArray> {
+        let mut arr = [0u8; 16];
+        LE::write_u128(&mut arr, self.0);
+        Ok(arr)
+    }
 
-        if LE::read_u32(&data[0..]) != 0x4c {
-            return Err(crate::Error::NotAShellLinkError);
-        }
-        if LE::read_u128(&data[4..]) != CLSID {
-            return Err(crate::Error::NotAShellLinkError);
-        }
-        header.link_flags = LinkFlags::from_bits_truncate(LE::read_u32(&data[20..]));
-        header.file_attributes = FileAttributeFlags::from_bits_truncate(LE::read_u32(&data[24..]));
-        header.creation_time = FileTime::from(LE::read_u64(&data[28..]));
-        header.access_time = FileTime::from(LE::read_u64(&data[36..]));
-        header.write_time = FileTime::from(LE::read_u64(&data[44..]));
-        header.file_size = LE::read_u32(&data[52..]);
-        header.icon_index = LE::read_i32(&data[56..]);
-        header.show_command = FromPrimitive::from_u32(LE::read_u32(&data[60..])).unwrap();
-        header.hotkey = HotkeyFlags::from_bits(LE::read_u16(&data[64..]));
-
-        Ok(header)
+    fn unpack(src: &Self::ByteArray) -> packed_struct::PackingResult<Self> {
+        Ok(Self(LE::read_u128(src)))
     }
 }
 
@@ -303,6 +202,21 @@ bitflags! {
     }
 }
 
+impl PackedStruct for LinkFlags {
+    type ByteArray = [u8; 4];
+
+    fn pack(&self) -> packed_struct::PackingResult<Self::ByteArray> {
+        let mut dest = [0u8; 4];
+        LE::write_u32(&mut dest, self.bits());
+        Ok(dest)
+    }
+
+    fn unpack(src: &Self::ByteArray) -> packed_struct::PackingResult<Self> {
+        let val = LE::read_u32(src);
+        Ok(Self::from_bits_truncate(val))
+    }
+}
+
 bitflags! {
     /// The FileAttributesFlags structure defines bits that specify the file attributes of the link
     /// target, if the target is a file system item. File attributes can be used if the link target
@@ -346,59 +260,36 @@ bitflags! {
     }
 }
 
-/// The HotkeyFlags structure specifies input generated by a combination of keyboard keys being
-/// pressed.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct HotkeyFlags {
-    low_byte: HotkeyKey,
-    high_byte: HotkeyModifiers,
+impl PackedStruct for FileAttributeFlags {
+    type ByteArray = [u8; 4];
+
+    fn pack(&self) -> packed_struct::PackingResult<Self::ByteArray> {
+        let mut dest = [0u8; 4];
+        LE::write_u32(&mut dest, self.bits());
+        Ok(dest)
+    }
+
+    fn unpack(src: &Self::ByteArray) -> packed_struct::PackingResult<Self> {
+        let val = LE::read_u32(src);
+        Ok(Self::from_bits_truncate(val))
+    }
 }
 
-impl HotkeyFlags {
-    /// Create a new HotkeyFlags instance.
-    pub fn new(low_byte: HotkeyKey, high_byte: HotkeyModifiers) -> Self {
-        Self {
-            low_byte,
-            high_byte,
-        }
-    }
-
-    /// Convert these HotkeyFlags to the u16 representation for saving.
-    fn to_flags_u16(self) -> u16 {
-        self.low_byte as u16 + ((self.high_byte.bits as u16) << 8)
-    }
-
-    /// Convert a u16 representation back into a set of HotkeyFlags.
-    fn from_bits(bits: u16) -> Self {
-        Self {
-            low_byte: FromPrimitive::from_u16(bits & 0b1111_1111).unwrap(),
-            high_byte: HotkeyModifiers::from_bits_truncate((bits >> 8) as u8),
-        }
-    }
-
-    /// The primary key assigned to the hotkey
-    pub fn key(&self) -> &HotkeyKey {
-        &self.low_byte
-    }
-
-    /// Set the hotkey primary key
-    pub fn set_key(&mut self, key: HotkeyKey) {
-        self.low_byte = key;
-    }
-
-    /// The modifiers (Shift, Ctrl, Alt) for this hotkey
-    pub fn modifiers(&self) -> &HotkeyModifiers {
-        &self.high_byte
-    }
-
-    /// Set the hotkey modifiers (Shift, Ctrl, Alt)
-    pub fn set_modifiers(&mut self, modifiers: HotkeyModifiers) {
-        self.high_byte = modifiers;
-    }
+/// The HotkeyFlags structure specifies input generated by a combination of keyboard keys being
+/// pressed.
+#[derive(PackedStruct, Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[packed_struct(endian = "lsb")]
+pub struct HotkeyFlags {
+    /// An 8-bit unsigned integer that specifies a virtual key code that corresponds to a key on the keyboard.
+    #[packed_field(element_size_bytes = "1", ty = "enum")]
+    pub key: HotkeyKey,
+    /// An 8-bit unsigned integer that specifies bits that correspond to modifier keys on the keyboard.
+    #[packed_field(element_size_bytes = "1")]
+    pub modifiers: HotkeyModifiers,
 }
 
 #[allow(missing_docs)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, FromPrimitive)]
+#[derive(PrimitiveEnum_u8, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 /// An 8-bit unsigned integer that specifies a virtual key code that corresponds to a key on the
 /// keyboard.
 pub enum HotkeyKey {
@@ -482,8 +373,20 @@ bitflags! {
     }
 }
 
+impl PackedStruct for HotkeyModifiers {
+    type ByteArray = [u8; 1];
+
+    fn pack(&self) -> packed_struct::PackingResult<Self::ByteArray> {
+        Ok([self.bits()])
+    }
+
+    fn unpack(src: &Self::ByteArray) -> packed_struct::PackingResult<Self> {
+        Ok(Self::from_bits_truncate(src[0]))
+    }
+}
+
 /// The expected window state of an application launched by the link.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, FromPrimitive)]
+#[derive(PrimitiveEnum_u32, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ShowCommand {
     /// The application is open and its window is open in a normal fashion.
     ShowNormal = 0x01,
