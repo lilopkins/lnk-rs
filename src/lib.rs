@@ -128,6 +128,7 @@ impl ShellLink {
     /// Create a new ShellLink pointing to a location, with otherwise default settings.
     pub fn new_simple<P: AsRef<Path>>(to: P) -> std::io::Result<Self> {
         use std::fs;
+        use std::path::PathBuf;
 
         let meta = fs::metadata(&to)?;
         let mut canonical = fs::canonicalize(&to)?.into_boxed_path();
