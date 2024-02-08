@@ -8,6 +8,7 @@ bitflags! {
   /// control the foreground and background text colors in the console
   /// window. The following bit definitions can be combined to specify 16
   /// different values each for the foreground and background colors:
+  #[derive(Clone, Debug, Eq, PartialEq)]
   pub struct FillAttributeFlags: u16 {
     /// The foreground text color contains blue.
     const FOREGROUND_BLUE      = 0b0000_0000_0000_0001;
@@ -33,6 +34,7 @@ bitflags! {
   /// A 32-bit, unsigned integer that specifies the family of the font
   /// used in the console window. This value MUST be comprised of a font
   /// family and an optional font pitch.
+  #[derive(Clone, Debug, Eq, PartialEq)]
   pub struct FontFamilyFlags: u32 {
     /// The font family is unknown.
     const FF_DONT_CARE  = 0x0000;

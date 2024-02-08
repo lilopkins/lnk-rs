@@ -175,6 +175,7 @@ impl Into<Vec<u8>> for LinkInfo {
 bitflags! {
     /// Flags that specify whether the VolumeID, LocalBasePath, LocalBasePathUnicode,
     /// and CommonNetworkRelativeLink fields are present in this structure.
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct LinkInfoFlags: u32 {
         /// If set, the VolumeIDand LocalBasePath fields are present, and their
         /// locations are specified by the values of the VolumeIDOffset and
@@ -371,6 +372,7 @@ impl Into<Vec<u8>> for CommonNetworkRelativeLink {
 
 bitflags! {
     /// Flags that specify the contents of the DeviceNameOffset and NetProviderType fields.
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct CommonNetworkRelativeLinkFlags: u32 {
         /// If set, the DeviceNameOffset field contains an offset to the device
         /// name. If not set, the DeviceNameOffset field does not contain an

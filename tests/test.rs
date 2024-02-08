@@ -47,12 +47,12 @@ fn test_lnk_header() {
     );
 
     assert_eq!(
-        shortcut.header().file_size(),
+        *shortcut.header().file_size(),
         0x00,
         "File size should be parsed correctly"
     );
     assert_eq!(
-        shortcut.header().icon_index(),
+        *shortcut.header().icon_index(),
         0x00,
         "Icon index should be parsed correctly"
     );

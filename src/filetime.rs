@@ -1,11 +1,12 @@
 use std::fmt;
 
+use binread::BinRead;
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 
 /// The FILETIME structure is a 64-bit value that represents the number of
 /// 100-nanosecond intervals that have elapsed since January 1, 1601,
 /// Coordinated Universal Time (UTC).
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, BinRead)]
 pub struct FileTime {
     low_date_time: u32,
     high_date_time: u32,
