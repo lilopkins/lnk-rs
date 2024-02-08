@@ -57,8 +57,8 @@ impl From<u64> for FileTime {
     }
 }
 
-impl Into<u64> for FileTime {
-    fn into(self) -> u64 {
-        u64::from(self.low_date_time) + (u64::from(self.high_date_time) << 32)
+impl From<FileTime> for u64 {
+    fn from(val: FileTime) -> Self {
+        u64::from(val.low_date_time) + (u64::from(val.high_date_time) << 32)
     }
 }

@@ -7,7 +7,7 @@ use log::{debug, error, info, trace, warn};
 /// The LinkTargetIDList structure specifies the target of the link. The presence of this optional
 /// structure is specified by the HasLinkTargetIDList bit (LinkFlagssection 2.1.1) in the
 /// ShellLinkHeader(section2.1).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LinkTargetIdList {
     /// The size, in bytes, of the IDList field.
     pub size: u16,
@@ -21,15 +21,6 @@ impl LinkTargetIdList {
     /// A stored IDList structure (section 2.2.1), which contains the item ID list.
     pub fn id_list(&self) -> &Vec<ItemID> {
         &self.id_list
-    }
-}
-
-impl Default for LinkTargetIdList {
-    fn default() -> Self {
-        Self {
-            size: 0,
-            id_list: Vec::new(),
-        }
     }
 }
 
