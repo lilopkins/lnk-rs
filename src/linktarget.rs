@@ -1,48 +1,69 @@
 use std::fmt;
 
+use binread::{io::error::Error, BinRead, BinReaderExt};
 use byteorder::{ByteOrder, LE};
+use chrono::format::Item;
+use getset::Getters;
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
+use num_traits::ops::bytes;
 
 /// The LinkTargetIDList structure specifies the target of the link. The presence of this optional
 /// structure is specified by the HasLinkTargetIDList bit (LinkFlagssection 2.1.1) in the
 /// ShellLinkHeader(section2.1).
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, BinRead)]
 pub struct LinkTargetIdList {
     /// The size, in bytes, of the IDList field.
     pub size: u16,
     /// A stored IDList structure (section 2.2.1), which contains the item ID list. An IDList
     /// structure conforms to the following ABNF \[RFC5234\]:
     ///   `IDLIST = *ITEMID TERMINALID`
-    id_list: Vec<ItemID>,
+    #[br(args(size))]
+    id_list: IdList,
 }
 
 impl LinkTargetIdList {
-    /// A stored IDList structure (section 2.2.1), which contains the item ID list.
     pub fn id_list(&self) -> &Vec<ItemID> {
-        &self.id_list
+        &self.id_list.item_id_list
     }
 }
 
-impl From<&[u8]> for LinkTargetIdList {
-    /// Read data into this struct from a `[u8]`.
-    fn from(data: &[u8]) -> Self {
-        let mut id_list = Self::default();
-        id_list.size = LE::read_u16(&data[0..]);
-        trace!("ID List size: {}", id_list.size);
-        let mut inner_data = &data[2..(id_list.size as usize)];
-        assert!(inner_data.len() == id_list.size as usize - 2);
-        let mut read_bytes = 2;
-        while read_bytes < id_list.size {
-            // Read an ItemID
-            let id = ItemID::from(inner_data);
-            debug!("Read {:?}", id);
-            let size = id.size;
-            id_list.id_list.push(id);
-            inner_data = &inner_data[(size as usize)..];
-            read_bytes += size;
+/// The stored IDList structure specifies the format of a persisted item ID list.
+#[derive(Clone, Debug, Default)]
+pub struct IdList {
+    item_id_list: Vec<ItemID>,
+}
+
+impl BinRead for IdList {
+    type Args = (u16,);
+
+    fn read_options<R: std::io::prelude::Read + std::io::prelude::Seek>(
+        reader: &mut R,
+        options: &binread::ReadOptions,
+        args: Self::Args,
+    ) -> binread::prelude::BinResult<Self> {
+        let mut item_id_list = Vec::new();
+        let mut bytes_to_read = args.0;
+        trace!("ID List size: {bytes_to_read}");
+        loop {
+            if bytes_to_read < 2 {
+                return Err(binread::error::Error::AssertFail{
+                    pos: reader.stream_position()?,
+                    message: "not enough bytes to read".to_string(),
+                });
+            }
+
+            let item_id: ItemID = reader.read_le()?;
+            if *item_id.size() == 0 {
+                assert_eq!(bytes_to_read, 2);
+                break;
+            }
+            
+            item_id_list.push(item_id);
+            bytes_to_read -= item_id.size();
         }
-        id_list
+
+        Ok(Self{item_id_list})
     }
 }
 
@@ -52,8 +73,8 @@ impl Into<Vec<u8>> for LinkTargetIdList {
 
         let size = 2u16;
         LE::write_u16(&mut data[0..2], size);
-        for id in self.id_list {
-            let mut other_data = id.into();
+        for id in self.id_list() {
+            let mut other_data = Into::<Vec<u8>>::into(*id);
             data.append(&mut other_data);
         }
 
@@ -62,29 +83,17 @@ impl Into<Vec<u8>> for LinkTargetIdList {
 }
 
 /// The stored IDList structure specifies the format of a persisted item ID list.
-#[derive(Clone)]
+#[derive(Clone, BinRead, Default, Getters)]
+#[getset(get="pub")]
 pub struct ItemID {
     /// A 16-bit, unsigned integer that specifies the size, in bytes, of the ItemID structure,
     /// including the ItemIDSize field.
+    #[br(assert(size == 0 || size>2))]
     pub(crate) size: u16,
+
     /// The shell data source-defined data that specifies an item.
+    #[br(if(size > 0), count=size-2)]
     data: Vec<u8>,
-}
-
-impl ItemID {
-    /// The shell data source-defined data that specifies an item.
-    pub fn data(&self) -> &Vec<u8> {
-        &self.data
-    }
-}
-
-impl Default for ItemID {
-    fn default() -> Self {
-        Self {
-            size: 0,
-            data: Vec::new(),
-        }
-    }
 }
 
 impl fmt::Debug for ItemID {

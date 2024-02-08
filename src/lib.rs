@@ -31,6 +31,8 @@
 //!
 //! > **IMPORTANT!**: Writing capability is currently in a very early stage and probably won't work!
 
+use binread::BinReaderExt;
+use thiserror::Error;
 use byteorder::{ByteOrder, LE};
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
@@ -74,20 +76,23 @@ mod filetime;
 pub use filetime::FileTime;
 
 mod strings;
+mod current_offset;
+pub use current_offset::*;
+
+#[macro_use]
+mod binread_flags;
 
 /// The error type for shell link parsing errors.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
-    /// An IO error occurred.
-    IoError(std::io::Error),
-    /// The parsed file isn't a shell link.
-    NotAShellLinkError,
-}
+    #[error("An IO error occurred: {0}")]
+    IoError(#[from] std::io::Error),
 
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
-        Error::IoError(e)
-    }
+    #[error("The parsed file isn't a shell link.")]
+    NotAShellLinkError,
+
+    #[error("Error while parsing: {0}")]
+    BinReadError(#[from] binread::Error)
 }
 
 /// A shell link
@@ -256,16 +261,16 @@ impl ShellLink {
     /// Open and parse a shell link
     pub fn open<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Error> {
         debug!("Opening {:?}", path.as_ref());
-        let mut r = BufReader::new(File::open(path)?);
-        let mut data = vec![];
+        let mut reader = BufReader::new(File::open(path)?);
+        //let mut data = vec![];
         trace!("Reading file.");
-        r.read_to_end(&mut data)?;
-
-        trace!("Parsing shell header.");
-        if data.len() < 0x4c {
-            return Err(Error::NotAShellLinkError);
-        }
-        let shell_link_header = header::ShellLinkHeader::try_from(&data[0..0x4c])?;
+        //r.read_to_end(&mut data)?;
+        
+        //trace!("Parsing shell header.");
+        //if data.len() < 0x4c {
+        //    return Err(Error::NotAShellLinkError);
+        //}
+        let shell_link_header: ShellLinkHeader = reader.read_le()?;
         debug!("Shell header: {:#?}", shell_link_header);
 
         let mut cursor = 0x4c;
@@ -275,7 +280,7 @@ impl ShellLink {
         if link_flags.contains(LinkFlags::HAS_LINK_TARGET_ID_LIST) {
             debug!("A LinkTargetIDList is marked as present. Parsing now.");
             debug!("Cursor position: 0x{:x}", cursor);
-            let list = linktarget::LinkTargetIdList::from(&data[cursor..]);
+            let list: LinkTargetIdList = reader.read_le()?;
             debug!("{:?}", list);
             cursor += list.size as usize + 2; // add LinkTargetSize size
             linktarget_id_list = Some(list);
@@ -285,7 +290,7 @@ impl ShellLink {
         if link_flags.contains(LinkFlags::HAS_LINK_INFO) {
             debug!("LinkInfo is marked as present. Parsing now.");
             debug!("Cursor position: 0x{:x}", cursor);
-            let info = linkinfo::LinkInfo::from(&data[cursor..]);
+            let info: LinkInfo = reader.read_le()?;
             debug!("{:?}", info);
             cursor += info.size as usize;
             link_info = Some(info);

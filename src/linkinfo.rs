@@ -1,9 +1,16 @@
+use std::io::SeekFrom;
+
+use binread::{BinRead, FilePtr};
 use bitflags::bitflags;
 use byteorder::{ByteOrder, LE};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 
-use crate::strings;
+use crate::{
+    binread_flags::binread_flags,
+    strings::{self, NullTerminatedString, SizedString, StringEncoding},
+    CurrentOffset,
+};
 
 /// The LinkInfo structure specifies information necessary to resolve a
 /// linktarget if it is not found in its original location. This includes
@@ -11,44 +18,128 @@ use crate::strings;
 /// drive letter, and a Universal Naming Convention (UNC)form of the path
 /// if one existed when the linkwas created. For more details about UNC
 /// paths, see [MS-DFSNM] section 2.2.1.4
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, BinRead)]
 pub struct LinkInfo {
-    /// The parsed struct size
-    pub size: u32,
+    start_offset: CurrentOffset,
+
+    /// LinkInfoSize (4 bytes): A 32-bit, unsigned integer that specifies the
+    /// size, in bytes, of the LinkInfo structure. All offsets specified in
+    /// this structure MUST be less than this value, and all strings contained
+    /// in this structure MUST fit within the extent defined by this size.
+    link_info_size: u32,
+
+    /// LinkInfoHeaderSize (4 bytes): A 32-bit, unsigned integer that
+    /// specifies the size, in bytes, of the LinkInfo header section, which is
+    /// composed of the LinkInfoSize, LinkInfoHeaderSize, LinkInfoFlags,
+    /// VolumeIDOffset, LocalBasePathOffset, CommonNetworkRelativeLinkOffset,
+    /// CommonPathSuffixOffset fields, and, if included, the
+    /// LocalBasePathOffsetUnicode and CommonPathSuffixOffsetUnicode fields.
+    link_info_header_size: u32,
+
     /// Flags that specify whether the VolumeID, LocalBasePath,
     /// LocalBasePathUnicode, and CommonNetworkRelativeLinkfields are present
     /// in this structure.
-    _link_info_flags: LinkInfoFlags,
+    link_info_flags: LinkInfoFlags,
+
+    /// VolumeIDOffset (4 bytes): A 32-bit, unsigned integer that specifies the
+    /// location of the VolumeID field. If the VolumeIDAndLocalBasePath flag is
+    /// set, this value is an offset, in bytes, from the start of the LinkInfo
+    /// structure; otherwise, this value MUST be zero.
+    #[br(assert(if link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH{volume_id_offset > 0 && volume_id_offset < link_info_size} else {volume_id_offset == 0}))]
+    volume_id_offset: u32,
+
+    /// LocalBasePathOffset (4 bytes): A 32-bit, unsigned integer that
+    /// specifies the location of the LocalBasePath field. If the
+    /// VolumeIDAndLocalBasePath flag is set, this value is an offset, in
+    /// bytes, from the start of the LinkInfo structure; otherwise, this value
+    /// MUST be zero.
+    #[br(assert(if link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH{local_base_path_offset > 0 && local_base_path_offset < link_info_size} else {local_base_path_offset == 0}))]
+    local_base_path_offset: u32,
+
+    /// CommonNetworkRelativeLinkOffset (4 bytes): A 32-bit, unsigned integer
+    /// that specifies the location of the CommonNetworkRelativeLink field. If
+    /// the CommonNetworkRelativeLinkAndPathSuffix flag is set, this value is
+    /// an offset, in bytes, from the start of the LinkInfo structure;
+    /// otherwise, this value MUST be zero.
+    #[br(assert(if link_info_flags & LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX{common_network_relative_link_offset > 0 && common_network_relative_link_offset < link_info_size} else {common_network_relative_link_offset == 0}))]
+    common_network_relative_link_offset: u32,
+
+    /// CommonPathSuffixOffset (4 bytes): A 32-bit, unsigned integer that
+    /// specifies the location of the CommonPathSuffix field. This value is
+    /// an offset, in bytes, from the start of the LinkInfo structure.
+    #[br(assert(common_path_suffix_offset < link_info_size))]
+    common_path_suffix_offset: u32,
+
+    /// LocalBasePathOffsetUnicode (4 bytes): An optional, 32-bit, unsigned
+    /// integer that specifies the location of the LocalBasePathUnicode field.
+    /// If the VolumeIDAndLocalBasePath flag is set, this value is an offset,
+    /// in bytes, from the start of the LinkInfo structure; otherwise, this
+    /// value MUST be zero. This field can be present only if the value of the
+    /// LinkInfoHeaderSize field is greater than or equal to 0x00000024.
+    #[br(
+        if(link_info_header_size >= 0x24),
+        assert(if let Some(offset) = local_base_path_offset_unicode{ if link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH{offset > 0 && offset < link_info_size} else {false}} else {true}))]
+    local_base_path_offset_unicode: Option<u32>,
+
+    /// CommonPathSuffixOffsetUnicode (4 bytes): An optional, 32-bit, unsigned
+    /// integer that specifies the location of the CommonPathSuffixUnicode
+    /// field. This value is an offset, in bytes, from the start of the
+    /// LinkInfo structure. This field can be present only if the value of the
+    /// LinkInfoHeaderSize field is greater than or equal to 0x00000024.
+    #[br(
+        if(link_info_header_size >= 0x24),
+        assert(if let Some(offset) = common_path_suffix_offset_unicode{ if link_info_flags & LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX{offset > 0 && offset < link_info_size} else {false}} else {true}))]
+    common_path_suffix_offset_unicode: Option<u32>,
+
     /// An optional VolumeID structure (section 2.3.1) that specifies
     /// information about the volume that the link target was on when the link
     /// was created. This field is present if the VolumeIDAndLocalBasePath
     /// flag is set.
+    #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_id_offset).into())),
+        if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH))]
     volume_id: Option<VolumeID>,
+
     /// An optional, NULL–terminated string, defined by the system default code
     /// page, which is used to construct the full path to the link item or link
     /// target by appending the string in the CommonPathSuffix field. This
     /// field is present if the VolumeIDAndLocalBasePath flag is set.
-    local_base_path: Option<String>,
+    #[br(
+        seek_before(SeekFrom::Start((*start_offset.as_ref() + local_base_path_offset_unicode.unwrap_or(local_base_path_offset)).into())),
+        if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH),
+        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)})
+    )]
+    local_base_path: Option<NullTerminatedString>,
+
     /// An optional CommonNetworkRelativeLink structure (section 2.3.2) that
     /// specifies information about the network location where the link target
     /// is stored.
+    #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + common_network_relative_link_offset).into())),
+        if(link_info_flags & LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX))]
     common_network_relative_link: Option<CommonNetworkRelativeLink>,
+    
     /// A NULL–terminated string, defined by the system default code page,
     /// which is used to construct the full path to the link item or link
     /// target by being appended to the string in the LocalBasePath field.
-    common_path_suffix: String,
+    #[br(
+        seek_before(SeekFrom::Start((*start_offset.as_ref() + common_path_suffix_offset_unicode.unwrap_or(common_path_suffix_offset)).into())),
+        args({common_path_suffix_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)})
+    )]
+    common_path_suffix: NullTerminatedString,
+
     /// An optional, NULL–terminated, Unicode string that is used to construct
     /// the full path to the link item or link target by appending the string
     /// in the CommonPathSuffixUnicode field. This field can be present only
     /// if the VolumeIDAndLocalBasePath flag is set and the value of the
     /// LinkInfoHeaderSize field is greater than or equal to 0x00000024.
-    local_base_path_unicode: Option<String>,
-    /// An optional, NULL–terminated, Unicode string that is used to construct
-    /// the full path to the link item or link target by being appended to the
-    /// string in the LocalBasePathUnicode field. This field can be present
-    /// only if the value of the LinkInfoHeaderSize field is greater than or
-    /// equal to 0x00000024.
-    common_path_suffix_unicode: Option<String>,
+    #[br(
+        if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH),
+        seek_before(SeekFrom::Start((*start_offset.as_ref() + local_base_path_offset_unicode.unwrap_or(local_base_path_offset)).into())),
+        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)})
+    )]
+    local_base_path_unicode: Option<NullTerminatedString>,
+    
+    #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + link_info_size).into())))]
+    _next_offset: CurrentOffset,
 }
 
 impl LinkInfo {
@@ -63,8 +154,8 @@ impl LinkInfo {
     /// page, which is used to construct the full path to the link item or link
     /// target by appending the string in the CommonPathSuffix field. This
     /// field is present if the VolumeIDAndLocalBasePath flag is set.
-    pub fn local_base_path(&self) -> &Option<String> {
-        &self.local_base_path
+    pub fn local_base_path(&self) -> Option<&str> {
+        self.local_base_path.map(|x| x.as_ref())
     }
     /// An optional CommonNetworkRelativeLink structure (section 2.3.2) that
     /// specifies information about the network location where the link target
@@ -75,27 +166,12 @@ impl LinkInfo {
     /// A NULL–terminated string, defined by the system default code page,
     /// which is used to construct the full path to the link item or link
     /// target by being appended to the string in the LocalBasePath field.
-    pub fn common_path_suffix(&self) -> &String {
-        &self.common_path_suffix
-    }
-    /// An optional, NULL–terminated, Unicode string that is used to construct
-    /// the full path to the link item or link target by appending the string
-    /// in the CommonPathSuffixUnicode field. This field can be present only
-    /// if the VolumeIDAndLocalBasePath flag is set and the value of the
-    /// LinkInfoHeaderSize field is greater than or equal to 0x00000024.
-    pub fn local_base_path_unicode(&self) -> &Option<String> {
-        &self.local_base_path_unicode
-    }
-    /// An optional, NULL–terminated, Unicode string that is used to construct
-    /// the full path to the link item or link target by being appended to the
-    /// string in the LocalBasePathUnicode field. This field can be present
-    /// only if the value of the LinkInfoHeaderSize field is greater than or
-    /// equal to 0x00000024.
-    pub fn common_path_suffix_unicode(&self) -> &Option<String> {
-        &self.common_path_suffix_unicode
+    pub fn common_path_suffix(&self) -> &str {
+        &self.common_path_suffix.as_ref()
     }
 }
 
+/*
 impl Default for LinkInfo {
     fn default() -> Self {
         Self {
@@ -110,7 +186,6 @@ impl Default for LinkInfo {
         }
     }
 }
-
 impl From<&[u8]> for LinkInfo {
     fn from(data: &[u8]) -> Self {
         let mut link_info = Self::default();
@@ -165,6 +240,7 @@ impl From<&[u8]> for LinkInfo {
         link_info
     }
 }
+ */
 
 impl Into<Vec<u8>> for LinkInfo {
     fn into(self) -> Vec<u8> {
@@ -199,19 +275,65 @@ bitflags! {
     }
 }
 
+binread_flags!(LinkInfoFlags, u32);
+
 /// The VolumeID structure specifies information about the volume that a link
 /// target was on when the link was created. This information is useful for
 /// resolving the link if the file is not found in its original location.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, BinRead)]
 pub struct VolumeID {
+    start_offset: CurrentOffset,
+    /// VolumeIDSize (4 bytes): A 32-bit, unsigned integer that specifies the
+    /// size, in bytes, of this structure. This value MUST be greater than
+    /// `0x00000010``. All offsets specified in this structure MUST be less
+    /// than this value, and all strings contained in this structure MUST fit
+    /// within the extent defined by this size.
+    #[br(assert(volume_id_size > 0x10))]
+    volume_id_size: u32,
+
     /// A 32-bit, unsigned integer that specifies the type of drive the link
     /// target is stored on.
     drive_type: DriveType,
+
     /// A 32-bit, unsigned integer that specifies the drive serial number of
     /// the volume the link target is stored on.
     drive_serial_number: u32,
+
+    /// VolumeLabelOffset (4 bytes): A 32-bit, unsigned integer that
+    /// specifies the location of a string that contains the volume label of
+    /// the drive that the link target is stored on. This value is an offset,
+    /// in bytes, from the start of the VolumeID structure to a NULL-terminated
+    /// string of characters, defined by the system default code page. The
+    /// volume label string is located in the Data field of this structure.
+    ///
+    /// If the value of this field is 0x00000014, it MUST be ignored, and the
+    /// value of the VolumeLabelOffsetUnicode field MUST be used to locate the
+    /// volume label string.
+    #[br(assert(volume_label_offset < volume_id_size))]
+    volume_label_offset: u32,
+
+    /// VolumeLabelOffsetUnicode (4 bytes): An optional, 32-bit, unsigned
+    /// integer that specifies the location of a string that contains the
+    /// volume label of the drive that the link target is stored on. This value
+    /// is an offset, in bytes, from the start of the VolumeID structure to a
+    /// NULL-terminated string of Unicode characters. The volume label string
+    /// is located in the Data field of this structure.
+    ///
+    /// If the value of the VolumeLabelOffset field is not 0x00000014, this
+    /// field MUST NOT be present; instead, the value of the VolumeLabelOffset
+    /// field MUST be used to locate the volume label string.
+
+    #[br(if(volume_label_offset == 0x14))]
+    volume_label_offset_unicode: Option<u32>,
+
     /// The label of the volume that the link target is stored on.
-    volume_label: String,
+    #[br(
+        seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_label_offset_unicode.unwrap_or(volume_label_offset)).into())),
+        args({volume_label_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}))]
+    volume_label: NullTerminatedString,
+
+    #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_id_size).into())))]
+    _next_offset: CurrentOffset,
 }
 
 impl VolumeID {
@@ -226,21 +348,11 @@ impl VolumeID {
         &self.drive_serial_number
     }
     /// The label of the volume that the link target is stored on.
-    pub fn volume_label(&self) -> &String {
-        &self.volume_label
+    pub fn volume_label(&self) -> &str {
+        self.volume_label.as_ref()
     }
 }
-
-impl Default for VolumeID {
-    fn default() -> Self {
-        Self {
-            drive_type: DriveType::DriveUnknown,
-            drive_serial_number: 0,
-            volume_label: String::new(),
-        }
-    }
-}
-
+/*
 impl From<&[u8]> for VolumeID {
     fn from(data: &[u8]) -> Self {
         let mut volume_id = VolumeID::default();
@@ -259,6 +371,7 @@ impl From<&[u8]> for VolumeID {
         volume_id
     }
 }
+ */
 
 impl Into<Vec<u8>> for VolumeID {
     fn into(self) -> Vec<u8> {
@@ -267,7 +380,8 @@ impl Into<Vec<u8>> for VolumeID {
 }
 
 /// A 32-bit, unsigned integer that specifies the type of drive the link target is stored on.
-#[derive(Clone, Debug, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Debug, FromPrimitive, ToPrimitive, BinRead)]
+#[br(repr(u32))]
 pub enum DriveType {
     /// The drive type cannot be determined.
     DriveUnknown = 0x00,
@@ -288,47 +402,83 @@ pub enum DriveType {
 /// The CommonNetworkRelativeLink structure specifies information about the network location where a
 /// link target is stored, including the mapped drive letter and the UNC path prefix. For details on
 /// UNC paths, see [MS-DFSNM] section 2.2.1.4.
-#[derive(Clone, Debug)]
+///
+/// <https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/23bb5877-e3dd-4799-9f50-79f05f938537>
+#[derive(Clone, Debug, BinRead)]
 pub struct CommonNetworkRelativeLink {
+    start_offset: CurrentOffset,
+
+    /// CommonNetworkRelativeLinkSize (4 bytes): A 32-bit, unsigned integer
+    /// that specifies the size, in bytes, of the CommonNetworkRelativeLink
+    /// structure. This value MUST be greater than or equal to 0x00000014. All
+    /// offsets specified in this structure MUST be less than this value, and
+    /// all strings contained in this structure MUST fit within the extent
+    /// defined by this size.
+    #[br(assert(common_network_relative_link_size >= 0x14))]
+    common_network_relative_link_size: u32,
+
     /// Flags that specify the contents of the DeviceNameOffset and
     /// NetProviderType fields.
     flags: CommonNetworkRelativeLinkFlags,
-    /// A 32-bit, unsigned integer that specifies the type of network
-    /// provider.
+
+    /// NetNameOffset (4 bytes): A 32-bit, unsigned integer that specifies the
+    /// location of the NetName field. This value is an offset, in bytes, from
+    /// the start of the CommonNetworkRelativeLink structure.
+    #[br(assert(net_name_offset < common_network_relative_link_size))]
+    net_name_offset: u32,
+
+    /// DeviceNameOffset (4 bytes): A 32-bit, unsigned integer that specifies
+    /// the location of the DeviceName field. If the ValidDevice flag is set,
+    /// this value is an offset, in bytes, from the start of the
+    /// CommonNetworkRelativeLink structure; otherwise, this value MUST be
+    /// zero.
+    #[br(assert(device_name_offset < common_network_relative_link_size))]
+    device_name_offset: u32,
+
+    /// NetworkProviderType (4 bytes): A 32-bit, unsigned integer that
+    /// specifies the type of network provider. If the ValidNetType flag is
+    /// set, this value MUST be one of the following; otherwise, this value
+    /// MUST be ignored.
+    #[br(map = |t| if flags & CommonNetworkRelativeLinkFlags::VALID_NET_TYPE == CommonNetworkRelativeLinkFlags::VALID_NET_TYPE {Some(t)} else {None})]
     network_provider_type: Option<NetworkProviderType>,
+
+    /// NetNameOffsetUnicode (4 bytes): An optional, 32-bit, unsigned integer
+    /// that specifies the location of the NetNameUnicode field. This value is
+    /// an offset, in bytes, from the start of the CommonNetworkRelativeLink
+    /// structure. This field MUST be present if the value of the NetNameOffset
+    /// field is greater than 0x00000014; otherwise, this field MUST NOT be present.
+    #[br(if(net_name_offset > 0x14))]
+    net_name_offset_unicode: Option<u32>,
+
+    /// DeviceNameOffsetUnicode (4 bytes): An optional, 32-bit, unsigned
+    /// integer that specifies the location of the DeviceNameUnicode field.
+    /// This value is an offset, in bytes, from the start of the
+    /// CommonNetworkRelativeLink structure. This field MUST be present if the
+    /// value of the NetNameOffset field is greater than 0x00000014; otherwise,
+    /// this field MUST NOT be present.
+    #[br(if(net_name_offset > 0x14))]
+    device_name_offset_unicode: Option<u32>,
+
     /// A NULL–terminated string, as defined by the system default code
     /// page, which specifies a server share path; for example,
     /// "\\server\share".
-    net_name: String,
+    #[br(
+        seek_before(SeekFrom::Start((*start_offset.as_ref() + net_name_offset_unicode.unwrap_or(net_name_offset)).into())),
+        args({net_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}))]
+    net_name: NullTerminatedString,
+
     /// A NULL–terminated string, as defined by the system default code
     /// page, which specifies a device; for example, the drive letter
     /// "D:".
-    device_name: String,
-    /// An optional, NULL–terminated, Unicode string that is the
-    /// Unicode version of the NetName string. This field MUST be
-    /// present if the value of the NetNameOffset field is greater
-    /// than 0x00000014; otherwise, this field MUST NOT be present.
-    net_name_unicode: Option<String>,
-    /// An optional, NULL–terminated, Unicode string that is the
-    /// Unicode version of the DeviceName string. This field MUST be
-    /// present if the value of the NetNameOffset field is greater than
-    /// 0x00000014; otherwise, this field MUST NOT be present.
-    device_name_unicode: Option<String>,
-}
+    #[br(
+        seek_before(SeekFrom::Start((*start_offset.as_ref() + device_name_offset_unicode.unwrap_or(device_name_offset)).into())),
+        args({device_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}))]
+    device_name: NullTerminatedString,
 
-impl Default for CommonNetworkRelativeLink {
-    fn default() -> Self {
-        Self {
-            flags: CommonNetworkRelativeLinkFlags::empty(),
-            network_provider_type: None,
-            net_name: String::new(),
-            device_name: String::new(),
-            net_name_unicode: None,
-            device_name_unicode: None,
-        }
-    }
+    #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + common_network_relative_link_size).into())))]
+    _next_offset: CurrentOffset,
 }
-
+/*
 impl From<&[u8]> for CommonNetworkRelativeLink {
     fn from(data: &[u8]) -> Self {
         let mut link = CommonNetworkRelativeLink::default();
@@ -363,6 +513,7 @@ impl From<&[u8]> for CommonNetworkRelativeLink {
         link
     }
 }
+ */
 
 impl Into<Vec<u8>> for CommonNetworkRelativeLink {
     fn into(self) -> Vec<u8> {
@@ -385,9 +536,12 @@ bitflags! {
     }
 }
 
+binread_flags!(CommonNetworkRelativeLinkFlags, u32);
+
 /// A 32-bit, unsigned integer that specifies the type of network provider.
 #[allow(missing_docs)]
-#[derive(Clone, Debug, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Debug, FromPrimitive, ToPrimitive, BinRead)]
+#[br(repr(u32))]
 pub enum NetworkProviderType {
     Avid = 0x1a0000,
     Docuspace = 0x1b0000,
