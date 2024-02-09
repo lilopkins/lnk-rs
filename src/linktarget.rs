@@ -44,7 +44,12 @@ impl BinRead for IdList {
         let mut item_id_list = Vec::new();
         let mut bytes_to_read = args.0;
         trace!("ID List size: {bytes_to_read}");
-        loop {
+        while bytes_to_read > 0 {
+
+            // an IDList contains any number of ItemID structures,
+            // followed by TerminalID which has a size of 2 bytes.
+            // So, if there are less than 2 bytes available, there
+            // is something wrong
             if bytes_to_read < 2 {
                 return Err(binread::error::Error::AssertFail{
                     pos: reader.stream_position()?,
@@ -53,6 +58,9 @@ impl BinRead for IdList {
             }
 
             let item_id: ItemID = reader.read_le()?;
+            
+            // if the item has a size of zero, then this
+            // is the terminator
             if *item_id.size() == 0 {
                 assert_eq!(bytes_to_read, 2);
                 break;
