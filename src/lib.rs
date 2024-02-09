@@ -33,15 +33,13 @@
 
 use binread::BinReaderExt;
 use thiserror::Error;
-use byteorder::{ByteOrder, LE};
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
-use std::convert::TryFrom;
 use std::fs::File;
 #[cfg(feature = "experimental_save")]
 use std::io::BufWriter;
-use std::io::{prelude::*, BufReader};
+use std::io::BufReader;
 #[cfg(feature = "experimental_save")]
 use std::path::Path;
 
@@ -79,11 +77,15 @@ mod strings;
 mod current_offset;
 pub use current_offset::*;
 
+use crate::stringdata::StringData;
+use crate::strings::SizedString;
+
 #[macro_use]
 mod binread_flags;
 
 /// The error type for shell link parsing errors.
 #[derive(Debug, Error)]
+#[allow(missing_docs)]
 pub enum Error {
     #[error("An IO error occurred: {0}")]
     IoError(#[from] std::io::Error),
@@ -96,7 +98,7 @@ pub enum Error {
 }
 
 /// A shell link
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ShellLink {
     shell_link_header: header::ShellLinkHeader,
     linktarget_id_list: Option<linktarget::LinkTargetIdList>,
@@ -273,77 +275,27 @@ impl ShellLink {
         let shell_link_header: ShellLinkHeader = reader.read_le()?;
         debug!("Shell header: {:#?}", shell_link_header);
 
-        let mut cursor = 0x4c;
-
         let mut linktarget_id_list = None;
         let link_flags = *shell_link_header.link_flags();
         if link_flags.contains(LinkFlags::HAS_LINK_TARGET_ID_LIST) {
             debug!("A LinkTargetIDList is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
             let list: LinkTargetIdList = reader.read_le()?;
             debug!("{:?}", list);
-            cursor += list.size as usize + 2; // add LinkTargetSize size
             linktarget_id_list = Some(list);
         }
 
         let mut link_info = None;
         if link_flags.contains(LinkFlags::HAS_LINK_INFO) {
             debug!("LinkInfo is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
             let info: LinkInfo = reader.read_le()?;
             debug!("{:?}", info);
-            cursor += info.size as usize;
             link_info = Some(info);
         }
 
-        let mut name_string = None;
-        let mut relative_path = None;
-        let mut working_dir = None;
-        let mut command_line_arguments = None;
-        let mut icon_location = None;
+        let string_data: StringData = reader.read_le_args((link_flags,))?;
 
-        if link_flags.contains(LinkFlags::HAS_NAME) {
-            debug!("Name is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let (len, data) = stringdata::parse_string(&data[cursor..], link_flags);
-            name_string = Some(data);
-            cursor += len; // add len bytes
-        }
-
-        if link_flags.contains(LinkFlags::HAS_RELATIVE_PATH) {
-            debug!("Relative path is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let (len, data) = stringdata::parse_string(&data[cursor..], link_flags);
-            relative_path = Some(data);
-            cursor += len; // add len bytes
-        }
-
-        if link_flags.contains(LinkFlags::HAS_WORKING_DIR) {
-            debug!("Working dir is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let (len, data) = stringdata::parse_string(&data[cursor..], link_flags);
-            working_dir = Some(data);
-            cursor += len; // add len bytes
-        }
-
-        if link_flags.contains(LinkFlags::HAS_ARGUMENTS) {
-            debug!("Arguments are marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let (len, data) = stringdata::parse_string(&data[cursor..], link_flags);
-            command_line_arguments = Some(data);
-            cursor += len; // add len bytes
-        }
-
-        if link_flags.contains(LinkFlags::HAS_ICON_LOCATION) {
-            debug!("Icon Location is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let (len, data) = stringdata::parse_string(&data[cursor..], link_flags);
-            icon_location = Some(data);
-            cursor += len; // add len bytes
-        }
-
-        let mut extra_data = Vec::new();
-
+        let extra_data = Vec::new();
+/*
         loop {
             if data[cursor..].len() < 4 {
                 warn!("The ExtraData length is invalid.");
@@ -360,16 +312,16 @@ impl ShellLink {
         }
 
         let _remaining_data = &data[cursor..];
-
+*/
         Ok(Self {
             shell_link_header,
             linktarget_id_list,
             link_info,
-            name_string,
-            relative_path,
-            working_dir,
-            command_line_arguments,
-            icon_location,
+            name_string: string_data.name_string().as_ref().map(SizedString::to_string),
+            relative_path: string_data.relative_path().as_ref().map(SizedString::to_string),
+            working_dir: string_data.working_dir().as_ref().map(SizedString::to_string),
+            command_line_arguments: string_data.command_line_arguments().as_ref().map(SizedString::to_string),
+            icon_location: string_data.icon_location().as_ref().map(SizedString::to_string),
             _extra_data: extra_data,
         })
     }

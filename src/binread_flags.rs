@@ -6,8 +6,8 @@ macro_rules! binread_flags {
         
             fn read_options<R: std::io::prelude::Read + std::io::prelude::Seek>(
                 reader: &mut R,
-                options: &binread::ReadOptions,
-                args: Self::Args,
+                _options: &binread::ReadOptions,
+                _args: Self::Args,
             ) -> binread::prelude::BinResult<Self> {
                 use binread::BinReaderExt;
                 let raw: $repr = reader.read_le()?;

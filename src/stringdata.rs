@@ -1,31 +1,56 @@
-use crate::LinkFlags;
-use byteorder::{ByteOrder, LE};
-use log::debug;
+use crate::{strings::{SizedString, StringEncoding}, LinkFlags};
+use binread::BinRead;
+use getset::Getters;
 
-pub fn parse_string(data: &[u8], flags: LinkFlags) -> (usize, String) {
-    let result = if !flags.contains(LinkFlags::IS_UNICODE) {
-        let char_bytes = LE::read_u16(data) as usize;
-        let total_bytes = 2 + char_bytes;
-        let char_data = &data[2..total_bytes];
-        // FIXME: Should be decoding with the system default encoding.
-        //        This is effectively Latin-1, as that is the first 256 code points
-        //        in Unicode.
-        let mut s = String::new();
-        s.reserve(char_bytes);
-        for char in char_data {
-            s.push(*char as char);
-        }
-        (total_bytes, s)
-    } else {
-        let char_count = LE::read_u16(data) as usize;
-        let total_bytes = 2 + char_count * 2;
-        let char_data = &data[2..total_bytes];
-        let mut u16_chars = vec![0u16; char_count];
-        LE::read_u16_into(char_data, &mut u16_chars);
-        (total_bytes, String::from_utf16_lossy(&u16_chars))
-    };
-    debug!("Parsed string: {:?}", result);
-    result
+#[derive(BinRead, Getters)]
+#[getset(get="pub")]
+#[br(import(link_flags: LinkFlags))]
+pub struct StringData {
+    /// NAME_STRING: An optional structure that specifies a description of the
+    /// shortcut that is displayed to end users to identify the purpose of the
+    /// shell link. This structure MUST be present if the HasName flag is set.
+    #[br(
+        if(link_flags & LinkFlags::HAS_NAME == LinkFlags::HAS_NAME),
+        args(StringEncoding::from(link_flags))
+    )]
+    name_string: Option<SizedString>,
+
+    /// RELATIVE_PATH: An optional structure that specifies the location of the
+    /// link target relative to the file that contains the shell link. When
+    /// specified, this string SHOULD be used when resolving the link. This
+    /// structure MUST be present if the HasRelativePath flag is set.
+    #[br(
+        if(link_flags & LinkFlags::HAS_RELATIVE_PATH == LinkFlags::HAS_RELATIVE_PATH),
+        args(StringEncoding::from(link_flags))
+    )]
+    relative_path: Option<SizedString>,
+
+    /// WORKING_DIR: An optional structure that specifies the file system path
+    /// of the working directory to be used when activating the link target.
+    /// This structure MUST be present if the HasWorkingDir flag is set.
+    #[br(
+        if(link_flags & LinkFlags::HAS_WORKING_DIR == LinkFlags::HAS_WORKING_DIR),
+        args(StringEncoding::from(link_flags))
+    )]
+    working_dir: Option<SizedString>,
+
+    /// COMMAND_LINE_ARGUMENTS: An optional structure that stores the
+    /// command-line arguments that are specified when activating the link
+    /// target. This structure MUST be present if the HasArguments flag is set.
+    #[br(
+        if(link_flags & LinkFlags::HAS_ARGUMENTS == LinkFlags::HAS_ARGUMENTS),
+        args(StringEncoding::from(link_flags))
+    )]
+    command_line_arguments: Option<SizedString>,
+
+    /// ICON_LOCATION: An optional structure that specifies the location of the
+    /// icon to be used when displaying a shell link item in an icon view. This
+    /// structure MUST be present if the HasIconLocation flag is set.
+    #[br(
+        if(link_flags & LinkFlags::HAS_ICON_LOCATION == LinkFlags::HAS_ICON_LOCATION),
+        args(StringEncoding::from(link_flags))
+    )]
+    icon_location: Option<SizedString>,
 }
 
 #[cfg(feature = "experimental_save")]

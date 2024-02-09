@@ -1,14 +1,13 @@
 use std::io::SeekFrom;
 
-use binread::{BinRead, FilePtr};
+use binread::BinRead;
 use bitflags::bitflags;
-use byteorder::{ByteOrder, LE};
+use getset::Getters;
 use num_derive::{FromPrimitive, ToPrimitive};
-use num_traits::FromPrimitive;
 
 use crate::{
     binread_flags::binread_flags,
-    strings::{self, NullTerminatedString, SizedString, StringEncoding},
+    strings::{NullTerminatedString, StringEncoding},
     CurrentOffset,
 };
 
@@ -18,7 +17,9 @@ use crate::{
 /// drive letter, and a Universal Naming Convention (UNC)form of the path
 /// if one existed when the linkwas created. For more details about UNC
 /// paths, see [MS-DFSNM] section 2.2.1.4
-#[derive(Clone, Debug, BinRead)]
+#[derive(Debug, BinRead, Getters)]
+#[get(get="pub")]
+#[allow(unused)]
 pub struct LinkInfo {
     start_offset: CurrentOffset,
 
@@ -108,6 +109,7 @@ pub struct LinkInfo {
         if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH),
         args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)})
     )]
+    #[getset(skip)]
     local_base_path: Option<NullTerminatedString>,
 
     /// An optional CommonNetworkRelativeLink structure (section 2.3.2) that
@@ -124,6 +126,7 @@ pub struct LinkInfo {
         seek_before(SeekFrom::Start((*start_offset.as_ref() + common_path_suffix_offset_unicode.unwrap_or(common_path_suffix_offset)).into())),
         args({common_path_suffix_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)})
     )]
+    #[getset(skip)]
     common_path_suffix: NullTerminatedString,
 
     /// An optional, NULL–terminated, Unicode string that is used to construct
@@ -143,31 +146,18 @@ pub struct LinkInfo {
 }
 
 impl LinkInfo {
-    /// An optional VolumeID structure (section 2.3.1) that specifies
-    /// information about the volume that the link target was on when the link
-    /// was created. This field is present if the VolumeIDAndLocalBasePath
-    /// flag is set.
-    pub fn volume_id(&self) -> &Option<VolumeID> {
-        &self.volume_id
-    }
     /// An optional, NULL–terminated string, defined by the system default code
     /// page, which is used to construct the full path to the link item or link
     /// target by appending the string in the CommonPathSuffix field. This
     /// field is present if the VolumeIDAndLocalBasePath flag is set.
     pub fn local_base_path(&self) -> Option<&str> {
-        self.local_base_path.map(|x| x.as_ref())
-    }
-    /// An optional CommonNetworkRelativeLink structure (section 2.3.2) that
-    /// specifies information about the network location where the link target
-    /// is stored.
-    pub fn common_network_relative_link(&self) -> &Option<CommonNetworkRelativeLink> {
-        &self.common_network_relative_link
+        self.local_base_path.as_ref().map(|x| x.as_ref())
     }
     /// A NULL–terminated string, defined by the system default code page,
     /// which is used to construct the full path to the link item or link
     /// target by being appended to the string in the LocalBasePath field.
     pub fn common_path_suffix(&self) -> &str {
-        &self.common_path_suffix.as_ref()
+        self.common_path_suffix.as_ref()
     }
 }
 
@@ -242,8 +232,8 @@ impl From<&[u8]> for LinkInfo {
 }
  */
 
-impl Into<Vec<u8>> for LinkInfo {
-    fn into(self) -> Vec<u8> {
+impl From<LinkInfo> for Vec<u8> {
+    fn from(_val: LinkInfo) -> Self {
         unimplemented!()
     }
 }
@@ -280,8 +270,11 @@ binread_flags!(LinkInfoFlags, u32);
 /// The VolumeID structure specifies information about the volume that a link
 /// target was on when the link was created. This information is useful for
 /// resolving the link if the file is not found in its original location.
-#[derive(Clone, Debug, BinRead)]
+#[derive(Clone, Debug, BinRead, Getters)]
+#[get(get="pub")]
+#[allow(unused)]
 pub struct VolumeID {
+    #[get(skip)]
     start_offset: CurrentOffset,
     /// VolumeIDSize (4 bytes): A 32-bit, unsigned integer that specifies the
     /// size, in bytes, of this structure. This value MUST be greater than
@@ -330,6 +323,7 @@ pub struct VolumeID {
     #[br(
         seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_label_offset_unicode.unwrap_or(volume_label_offset)).into())),
         args({volume_label_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}))]
+    #[getset(skip)]
     volume_label: NullTerminatedString,
 
     #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_id_size).into())))]
@@ -337,16 +331,6 @@ pub struct VolumeID {
 }
 
 impl VolumeID {
-    /// A 32-bit, unsigned integer that specifies the type of drive the link
-    /// target is stored on.
-    pub fn drive_type(&self) -> &DriveType {
-        &self.drive_type
-    }
-    /// A 32-bit, unsigned integer that specifies the drive serial number of
-    /// the volume the link target is stored on.
-    pub fn drive_serial_number(&self) -> &u32 {
-        &self.drive_serial_number
-    }
     /// The label of the volume that the link target is stored on.
     pub fn volume_label(&self) -> &str {
         self.volume_label.as_ref()
@@ -373,8 +357,8 @@ impl From<&[u8]> for VolumeID {
 }
  */
 
-impl Into<Vec<u8>> for VolumeID {
-    fn into(self) -> Vec<u8> {
+impl From<VolumeID> for Vec<u8> {
+    fn from(_val: VolumeID) -> Self {
         unimplemented!()
     }
 }
@@ -405,6 +389,7 @@ pub enum DriveType {
 ///
 /// <https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/23bb5877-e3dd-4799-9f50-79f05f938537>
 #[derive(Clone, Debug, BinRead)]
+#[allow(unused)]
 pub struct CommonNetworkRelativeLink {
     start_offset: CurrentOffset,
 
@@ -515,8 +500,8 @@ impl From<&[u8]> for CommonNetworkRelativeLink {
 }
  */
 
-impl Into<Vec<u8>> for CommonNetworkRelativeLink {
-    fn into(self) -> Vec<u8> {
+impl From<CommonNetworkRelativeLink> for Vec<u8> {
+    fn from(_val: CommonNetworkRelativeLink) -> Self {
         unimplemented!()
     }
 }

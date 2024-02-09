@@ -1,5 +1,7 @@
 use binread::{io::StreamPosition, BinRead};
 
+/// implements [`BinRead`] by reading the current cursort position
+/// and storing it as `u32`
 #[derive(Clone, Debug)]
 pub struct CurrentOffset(u32);
 
@@ -8,8 +10,8 @@ impl BinRead for CurrentOffset {
 
     fn read_options<R: std::io::prelude::Read + std::io::prelude::Seek>(
         reader: &mut R,
-        options: &binread::ReadOptions,
-        args: Self::Args,
+        _options: &binread::ReadOptions,
+        _args: Self::Args,
     ) -> binread::prelude::BinResult<Self> {
         Ok(Self(reader.stream_pos()?.try_into().expect("invalid offset")))
     }

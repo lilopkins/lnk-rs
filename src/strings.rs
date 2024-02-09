@@ -3,6 +3,8 @@ use std::fmt::Display;
 use binread::{BinRead, BinReaderExt, NullWideString};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 
+use crate::LinkFlags;
+
 pub fn trim_nul_terminated_string<S: Into<String>>(s: S) -> String {
     let s = s.into();
     let end_index = s.find('\0').unwrap_or(0);
@@ -13,6 +15,16 @@ pub fn trim_nul_terminated_string<S: Into<String>>(s: S) -> String {
 pub enum StringEncoding {
     CodePage,
     Unicode,
+}
+
+impl From<LinkFlags> for StringEncoding {
+    fn from(link_flags: LinkFlags) -> Self {
+        if link_flags & LinkFlags::IS_UNICODE == LinkFlags::IS_UNICODE {
+            Self::Unicode
+        } else {
+            Self::CodePage
+        }
+    }
 }
 
 
@@ -28,7 +40,7 @@ impl BinRead for SizedString {
 
     fn read_options<R: std::io::prelude::Read + std::io::prelude::Seek>(
         reader: &mut R,
-        options: &binread::ReadOptions,
+        _options: &binread::ReadOptions,
         args: Self::Args,
     ) -> binread::prelude::BinResult<Self> {
         let count_characters: u16 = reader.read_le()?;
@@ -79,7 +91,7 @@ impl BinRead for NullTerminatedString {
 
     fn read_options<R: std::io::prelude::Read + std::io::prelude::Seek>(
         reader: &mut R,
-        options: &binread::ReadOptions,
+        _options: &binread::ReadOptions,
         args: Self::Args,
     ) -> binread::prelude::BinResult<Self> {
         match args.0 {

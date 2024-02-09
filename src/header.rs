@@ -1,11 +1,11 @@
-use binread::{derive_binread, BinRead, BinReaderExt};
+#![allow(missing_docs)]
+use std::mem::size_of;
+
+use binread::{derive_binread, BinRead};
 use bitflags::bitflags;
 use byteorder::{ByteOrder, LE};
 use getset::{Getters, MutGetters, Setters};
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-
-use std::{mem::size_of};
 
 use  crate::binread_flags::*;
 
@@ -93,21 +93,21 @@ impl Default for ShellLinkHeader {
     }
 }
 
-impl Into<[u8; 0x4c]> for ShellLinkHeader {
+impl From<ShellLinkHeader> for [u8; 0x4c] {
     /// Write the data in this header to a `[u8]` for writing to the output file.
-    fn into(self) -> [u8; 0x4c] {
+    fn from(val: ShellLinkHeader) -> Self {
         let mut header_data = [0u8; 0x4c];
         LE::write_u32(&mut header_data[0..], 0x4c);
         LE::write_u128(&mut header_data[4..], CLSID);
-        LE::write_u32(&mut header_data[20..], self.link_flags.bits());
-        LE::write_u32(&mut header_data[24..], self.file_attributes.bits());
-        LE::write_u64(&mut header_data[28..], self.creation_time.into());
-        LE::write_u64(&mut header_data[36..], self.access_time.into());
-        LE::write_u64(&mut header_data[44..], self.write_time.into());
-        LE::write_u32(&mut header_data[52..], self.file_size);
-        LE::write_i32(&mut header_data[56..], self.icon_index);
-        LE::write_u32(&mut header_data[60..], self.show_command as u32);
-        LE::write_u16(&mut header_data[64..], self.hotkey.to_flags_u16());
+        LE::write_u32(&mut header_data[20..], val.link_flags.bits());
+        LE::write_u32(&mut header_data[24..], val.file_attributes.bits());
+        LE::write_u64(&mut header_data[28..], val.creation_time.into());
+        LE::write_u64(&mut header_data[36..], val.access_time.into());
+        LE::write_u64(&mut header_data[44..], val.write_time.into());
+        LE::write_u32(&mut header_data[52..], val.file_size);
+        LE::write_i32(&mut header_data[56..], val.icon_index);
+        LE::write_u32(&mut header_data[60..], val.show_command as u32);
+        LE::write_u16(&mut header_data[64..], val.hotkey.to_flags_u16());
         LE::write_u16(&mut header_data[66..], 0);
         LE::write_u32(&mut header_data[68..], 0);
         LE::write_u32(&mut header_data[72..], 0);
@@ -304,14 +304,6 @@ impl HotkeyFlags {
     /// Convert these HotkeyFlags to the u16 representation for saving.
     fn to_flags_u16(self) -> u16 {
         self.low_byte as u16 + ((self.high_byte.bits() as u16) << 8)
-    }
-
-    /// Convert a u16 representation back into a set of HotkeyFlags.
-    fn from_bits(bits: u16) -> Self {
-        Self {
-            low_byte: FromPrimitive::from_u16(bits & 0b1111_1111).unwrap(),
-            high_byte: HotkeyModifiers::from_bits_truncate((bits >> 8) as u8),
-        }
     }
 
     /// The primary key assigned to the hotkey

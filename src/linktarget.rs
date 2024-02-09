@@ -1,12 +1,10 @@
 use std::fmt;
 
-use binread::{io::error::Error, BinRead, BinReaderExt};
+use binread::{BinRead, BinReaderExt};
 use byteorder::{ByteOrder, LE};
-use chrono::format::Item;
 use getset::Getters;
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
-use num_traits::ops::bytes;
 
 /// The LinkTargetIDList structure specifies the target of the link. The presence of this optional
 /// structure is specified by the HasLinkTargetIDList bit (LinkFlagssection 2.1.1) in the
@@ -23,6 +21,7 @@ pub struct LinkTargetIdList {
 }
 
 impl LinkTargetIdList {
+    /// returns a reference to internal list of [`ItemID`] items
     pub fn id_list(&self) -> &Vec<ItemID> {
         &self.id_list.item_id_list
     }
@@ -39,7 +38,7 @@ impl BinRead for IdList {
 
     fn read_options<R: std::io::prelude::Read + std::io::prelude::Seek>(
         reader: &mut R,
-        options: &binread::ReadOptions,
+        _options: &binread::ReadOptions,
         args: Self::Args,
     ) -> binread::prelude::BinResult<Self> {
         let mut item_id_list = Vec::new();
@@ -59,22 +58,22 @@ impl BinRead for IdList {
                 break;
             }
             
-            item_id_list.push(item_id);
             bytes_to_read -= item_id.size();
+            item_id_list.push(item_id);
         }
 
         Ok(Self{item_id_list})
     }
 }
 
-impl Into<Vec<u8>> for LinkTargetIdList {
-    fn into(self) -> Vec<u8> {
+impl From<LinkTargetIdList> for Vec<u8> {
+    fn from(val: LinkTargetIdList) -> Self {
         let mut data = Vec::new();
 
         let size = 2u16;
         LE::write_u16(&mut data[0..2], size);
-        for id in self.id_list() {
-            let mut other_data = Into::<Vec<u8>>::into(*id);
+        for id in val.id_list() {
+            let mut other_data = Into::<Vec<u8>>::into(id.clone());
             data.append(&mut other_data);
         }
 
@@ -113,14 +112,14 @@ impl From<&[u8]> for ItemID {
     }
 }
 
-impl Into<Vec<u8>> for ItemID {
-    fn into(self) -> Vec<u8> {
+impl From<ItemID> for Vec<u8> {
+    fn from(val: ItemID) -> Self {
         let mut data = Vec::new();
 
-        assert_eq!(self.data.len() as u16 + 2, self.size);
+        assert_eq!(val.data.len() as u16 + 2, val.size);
 
-        LE::write_u16(&mut data, self.size);
-        let mut other_data = self.data.clone();
+        LE::write_u16(&mut data, val.size);
+        let mut other_data = val.data.clone();
         data.append(&mut other_data);
 
         data
