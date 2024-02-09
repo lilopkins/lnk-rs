@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use binread::{BinRead, BinReaderExt, NullWideString};
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
+use log::trace;
 
 use crate::LinkFlags;
 
@@ -44,6 +45,8 @@ impl BinRead for SizedString {
         args: Self::Args,
     ) -> binread::prelude::BinResult<Self> {
         let count_characters: u16 = reader.read_le()?;
+        trace!("reading sized string of size '{count_characters}' at 0x{:08x}", reader.stream_position()?);
+
         match args.0 {
             StringEncoding::CodePage => {
                 let mut buffer = vec![0; count_characters.into()];
@@ -52,19 +55,19 @@ impl BinRead for SizedString {
                 if had_errors {
                     return Err(binread::error::Error::AssertFail {
                         pos: reader.stream_position()?,
-                        message: "unable to decode String".to_string(),
+                        message: format!("unable to decode String to CP1252 from buffer {buffer:?}"),
                     });
                 }
                 Ok(Self(cow.to_string()))
             }
             StringEncoding::Unicode => {
-                let mut buffer = vec![0; (count_characters / 2).into()];
+                let mut buffer = vec![0; (count_characters*2).into()];
                 reader.read_exact(&mut buffer)?;
                 let (cow, _, had_errors) = UTF_16LE.decode(&buffer);
                 if had_errors {
                     return Err(binread::error::Error::AssertFail {
                         pos: reader.stream_position()?,
-                        message: "unable to decode String".to_string(),
+                        message: format!("unable to decode String to UTF-16LE from buffer {buffer:?}"),
                     });
                 }
                 Ok(Self(cow.to_string()))
@@ -109,7 +112,7 @@ impl BinRead for NullTerminatedString {
                 if had_errors {
                     return Err(binread::error::Error::AssertFail {
                         pos: reader.stream_position()?,
-                        message: "unable to decode String".to_string(),
+                        message: format!("unable to decode String to CP1252 from buffer {buffer:?}"),
                     });
                 }
                 Ok(Self(cow.to_string()))

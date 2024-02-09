@@ -99,7 +99,7 @@ pub struct ItemID {
     pub(crate) size: u16,
 
     /// The shell data source-defined data that specifies an item.
-    #[br(if(size > 0), count=size-2)]
+    #[br(if(size > 0), count=if size > 0 {size - 2} else {0})]
     data: Vec<u8>,
 }
 

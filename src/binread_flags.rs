@@ -11,7 +11,13 @@ macro_rules! binread_flags {
             ) -> binread::prelude::BinResult<Self> {
                 use binread::BinReaderExt;
                 let raw: $repr = reader.read_le()?;
-                Ok(Self::from_bits(raw).unwrap())
+                match Self::from_bits(raw) {
+                    Some(res) => Ok(res),
+                    None => Err(binread::Error::AssertFail {
+                        pos: reader.stream_position()?,
+                        message: format!("unable to convert '0x{raw:x}' to {}", stringify!($type))
+                    })
+                }
             }
         }
     };

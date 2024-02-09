@@ -22,6 +22,8 @@ const CLSID: u128 = 0x460000000000_00c0_0000_0000_00021401;
 #[br(little)]
 #[getset(get="pub", get_mut="pub", set="pub")]
 pub struct ShellLinkHeader {
+    /// The size, in bytes, of this structure. This value MUST be 0x0000004C.
+    #[br(assert(header_size == 0x0000_004c))]
     header_size: u32,
 
     #[br(assert(link_clsid == CLSID))]
@@ -65,6 +67,18 @@ pub struct ShellLinkHeader {
     /// application referenced by the shortcut key. This value is assigned to the application after
     /// it is launched, so that pressing the key activates that application.
     hotkey: HotkeyFlags,
+
+    /// A value that MUST be zero
+    #[br(assert(reserved1 == 0))]
+    reserved1: u16,
+
+    /// A value that MUST be zero
+    #[br(assert(reserved2 == 0))]
+    reserved2: u32,
+    
+    /// A value that MUST be zero
+    #[br(assert(reserved3 == 0))]
+    reserved3: u32,
 }
 
 impl ShellLinkHeader {
@@ -89,6 +103,9 @@ impl Default for ShellLinkHeader {
             icon_index: 0,
             show_command: ShowCommand::ShowNormal,
             hotkey: HotkeyFlags::new(HotkeyKey::NoKeyAssigned, HotkeyModifiers::NO_MODIFIER),
+            reserved1: 0,
+            reserved2: 0,
+            reserved3: 0
         }
     }
 }
