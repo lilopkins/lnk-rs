@@ -131,35 +131,6 @@ impl From<ShellLinkHeader> for [u8; 0x4c] {
         header_data
     }
 }
-/*impl TryFrom<&[u8]> for ShellLinkHeader {
-    type Error = crate::Error;
-
-    /// Read data into this struct from a `[u8]`.
-    /// Returns an error when the magic number is not valid.
-    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
-        let mut header = Self::default();
-
-        if LE::read_u32(&data[0..]) != 0x4c {
-            return Err(crate::Error::NotAShellLinkError);
-        }
-        if LE::read_u128(&data[4..]) != CLSID {
-            return Err(crate::Error::NotAShellLinkError);
-        }
-        header.link_flags = LinkFlags::from_bits_truncate(LE::read_u32(&data[20..]));
-        header.file_attributes = FileAttributeFlags::from_bits_truncate(LE::read_u32(&data[24..]));
-        header.creation_time = FileTime::from(LE::read_u64(&data[28..]));
-        header.access_time = FileTime::from(LE::read_u64(&data[36..]));
-        header.write_time = FileTime::from(LE::read_u64(&data[44..]));
-        header.file_size = LE::read_u32(&data[52..]);
-        header.icon_index = LE::read_i32(&data[56..]);
-        header.show_command = FromPrimitive::from_u32(LE::read_u32(&data[60..])).unwrap();
-        header.hotkey = HotkeyFlags::from_bits(LE::read_u16(&data[64..]));
-
-        Ok(header)
-    }
-}
- */
-
 
 bitflags! {
     /// The LinkFlags structure defines bits that specify which shell linkstructures are present in
