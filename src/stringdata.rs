@@ -11,9 +11,10 @@ pub struct StringData {
     /// shell link. This structure MUST be present if the HasName flag is set.
     #[br(
         if(link_flags & LinkFlags::HAS_NAME == LinkFlags::HAS_NAME),
-        args(StringEncoding::from(link_flags))
+        args(StringEncoding::from(link_flags)),
+        map=|s: Option<SizedString>|s.map(|t| t.to_string())
     )]
-    name_string: Option<SizedString>,
+    name_string: Option<String>,
 
     /// RELATIVE_PATH: An optional structure that specifies the location of the
     /// link target relative to the file that contains the shell link. When
@@ -21,36 +22,40 @@ pub struct StringData {
     /// structure MUST be present if the HasRelativePath flag is set.
     #[br(
         if(link_flags & LinkFlags::HAS_RELATIVE_PATH == LinkFlags::HAS_RELATIVE_PATH),
-        args(StringEncoding::from(link_flags))
+        args(StringEncoding::from(link_flags)),
+        map=|s: Option<SizedString>|s.map(|t| t.to_string())
     )]
-    relative_path: Option<SizedString>,
+    relative_path: Option<String>,
 
     /// WORKING_DIR: An optional structure that specifies the file system path
     /// of the working directory to be used when activating the link target.
     /// This structure MUST be present if the HasWorkingDir flag is set.
     #[br(
         if(link_flags & LinkFlags::HAS_WORKING_DIR == LinkFlags::HAS_WORKING_DIR),
-        args(StringEncoding::from(link_flags))
+        args(StringEncoding::from(link_flags)),
+        map=|s: Option<SizedString>|s.map(|t| t.to_string())
     )]
-    working_dir: Option<SizedString>,
+    working_dir: Option<String>,
 
     /// COMMAND_LINE_ARGUMENTS: An optional structure that stores the
     /// command-line arguments that are specified when activating the link
     /// target. This structure MUST be present if the HasArguments flag is set.
     #[br(
         if(link_flags & LinkFlags::HAS_ARGUMENTS == LinkFlags::HAS_ARGUMENTS),
-        args(StringEncoding::from(link_flags))
+        args(StringEncoding::from(link_flags)),
+        map=|s: Option<SizedString>|s.map(|t| t.to_string())
     )]
-    command_line_arguments: Option<SizedString>,
+    command_line_arguments: Option<String>,
 
     /// ICON_LOCATION: An optional structure that specifies the location of the
     /// icon to be used when displaying a shell link item in an icon view. This
     /// structure MUST be present if the HasIconLocation flag is set.
     #[br(
         if(link_flags & LinkFlags::HAS_ICON_LOCATION == LinkFlags::HAS_ICON_LOCATION),
-        args(StringEncoding::from(link_flags))
+        args(StringEncoding::from(link_flags)),
+        map=|s: Option<SizedString>|s.map(|t| t.to_string())
     )]
-    icon_location: Option<SizedString>,
+    icon_location: Option<String>,
 }
 
 #[cfg(feature = "experimental_save")]

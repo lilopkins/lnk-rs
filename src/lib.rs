@@ -73,12 +73,16 @@ pub use extradata::ExtraData;
 mod filetime;
 pub use filetime::FileTime;
 
-mod strings;
 mod current_offset;
 pub use current_offset::*;
 
 use crate::stringdata::StringData;
-use crate::strings::SizedString;
+
+mod guid;
+pub use guid::*;
+
+mod strings;
+pub use strings::*;
 
 #[macro_use]
 mod binread_flags;
@@ -108,7 +112,8 @@ pub struct ShellLink {
     working_dir: Option<String>,
     command_line_arguments: Option<String>,
     icon_location: Option<String>,
-    _extra_data: Vec<extradata::ExtraData>,
+    #[allow(unused)]
+    extra_data: extradata::ExtraData,
 }
 
 impl Default for ShellLink {
@@ -125,7 +130,7 @@ impl Default for ShellLink {
             working_dir: None,
             command_line_arguments: None,
             icon_location: None,
-            _extra_data: vec![],
+            extra_data: Default::default(),
         }
     }
 }
@@ -294,35 +299,34 @@ impl ShellLink {
 
         let string_data: StringData = reader.read_le_args((link_flags,))?;
 
-        let extra_data = Vec::new();
-/*
-        loop {
-            if data[cursor..].len() < 4 {
-                warn!("The ExtraData length is invalid.");
-                break; // Probably an error?
-            }
-            debug!("Parsing ExtraData");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let query = LE::read_u32(&data[cursor..]);
-            if query < 0x04 {
-                break;
-            }
-            extra_data.push(extradata::ExtraData::from(&data[cursor..]));
-            cursor += query as usize;
+        if let Some(name_string) = string_data.name_string().as_ref() {
+            println!("found name_string   {name_string}");
+        }
+        if let Some(relative_path) = string_data.relative_path().as_ref() {
+            println!("found relative_path {relative_path}");
+        }
+        if let Some(working_dir) = string_data.working_dir().as_ref() {
+            println!("found working_dir   {working_dir}");
+        }
+        if let Some(command_line_arguments) = string_data.command_line_arguments().as_ref() {
+            println!("found command_line_arguments {command_line_arguments}");
+        }
+        if let Some(icon_location) = string_data.icon_location().as_ref() {
+            println!("found icon_location {icon_location}");
         }
 
-        let _remaining_data = &data[cursor..];
-*/
+        let extra_data: ExtraData = reader.read_le()?;
+
         Ok(Self {
             shell_link_header,
             linktarget_id_list,
             link_info,
-            name_string: string_data.name_string().as_ref().map(SizedString::to_string),
-            relative_path: string_data.relative_path().as_ref().map(SizedString::to_string),
-            working_dir: string_data.working_dir().as_ref().map(SizedString::to_string),
-            command_line_arguments: string_data.command_line_arguments().as_ref().map(SizedString::to_string),
-            icon_location: string_data.icon_location().as_ref().map(SizedString::to_string),
-            _extra_data: extra_data,
+            name_string: string_data.name_string().clone(),
+            relative_path: string_data.relative_path().clone(),
+            working_dir: string_data.working_dir().clone(),
+            command_line_arguments: string_data.command_line_arguments().clone(),
+            icon_location: string_data.icon_location().clone(),
+            extra_data,
         })
     }
 
