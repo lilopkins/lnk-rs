@@ -102,10 +102,12 @@ pub struct ItemID {
     /// A 16-bit, unsigned integer that specifies the size, in bytes, of the ItemID structure,
     /// including the ItemIDSize field.
     #[br(assert(size == 0 || size>2))]
+    #[serde(skip)]
     pub(crate) size: u16,
 
     /// The shell data source-defined data that specifies an item.
     #[br(if(size > 0), count=if size > 0 {size - 2} else {0})]
+    #[serde(with = "serde_bytes")]
     data: Vec<u8>,
 }
 
