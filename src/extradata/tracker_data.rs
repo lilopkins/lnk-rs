@@ -18,7 +18,7 @@ pub struct TrackerDataBlock {
     length: u32,
 
     /// A 32-bit, unsigned integer. This value MUST be 0x00000000   
-    #[br(assert(length == 0x00000000))]
+    #[br(assert(version == 0x00000000))]
     version: u32,
 
     /// A NULL–terminated character string, as defined by the system default
