@@ -6,10 +6,14 @@ use getset::Getters;
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
+#[cfg(feature="lnk2json")]
+use serde::Serialize;
+
 /// The LinkTargetIDList structure specifies the target of the link. The presence of this optional
 /// structure is specified by the HasLinkTargetIDList bit (LinkFlagssection 2.1.1) in the
 /// ShellLinkHeader(section2.1).
 #[derive(Clone, Debug, Default, BinRead)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 pub struct LinkTargetIdList {
     /// The size, in bytes, of the IDList field.
     pub size: u16,
@@ -29,6 +33,7 @@ impl LinkTargetIdList {
 
 /// The stored IDList structure specifies the format of a persisted item ID list.
 #[derive(Clone, Debug, Default)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 pub struct IdList {
     item_id_list: Vec<ItemID>,
 }
@@ -91,6 +96,7 @@ impl From<LinkTargetIdList> for Vec<u8> {
 
 /// The stored IDList structure specifies the format of a persisted item ID list.
 #[derive(Clone, BinRead, Default, Getters)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 #[getset(get="pub")]
 pub struct ItemID {
     /// A 16-bit, unsigned integer that specifies the size, in bytes, of the ItemID structure,

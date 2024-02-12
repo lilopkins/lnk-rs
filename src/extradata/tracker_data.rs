@@ -1,6 +1,9 @@
 use binread::BinRead;
 use encoding_rs::WINDOWS_1252;
 
+#[cfg(feature="lnk2json")]
+use serde::Serialize;
+
 use crate::{strings::FixedSizeString, Guid};
 
 /// The TrackerDataBlock structure specifies data that can be used to
@@ -8,6 +11,7 @@ use crate::{strings::FixedSizeString, Guid};
 /// when the link is resolved. This data is passed to the Link
 /// Tracking service [MS-DLTW] to find the link target.
 #[derive(Clone, Debug, BinRead)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 #[br(import(block_size: u32), pre_assert(block_size == 0x0000_00060))]
 #[allow(unused)]
 pub struct TrackerDataBlock {

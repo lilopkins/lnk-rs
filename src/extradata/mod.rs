@@ -2,6 +2,9 @@ use binread::{BinRead, BinReaderExt};
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
+#[cfg(feature="lnk2json")]
+use serde::Serialize;
+
 use self::{
     console_data::ConsoleDataBlock, console_fe_data::ConsoleFEDataBlock,
     darwin_data::DarwinDataBlock, environment_variable_data::EnvironmentVariableDataBlock,
@@ -77,6 +80,7 @@ pub mod vista_and_above_id_list_data;
 
 #[allow(missing_docs)]
 #[derive(Clone, Debug, BinRead)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 #[br(import(_block_size: u32))]
 pub enum ExtraDataBlock {
     #[br(magic = 0xa0000002u32)]
@@ -105,6 +109,7 @@ pub enum ExtraDataBlock {
 
 #[derive(Default, Debug)]
 #[allow(missing_docs, unused)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 pub struct ExtraData {
     blocks: Vec<ExtraDataBlock>,
 }

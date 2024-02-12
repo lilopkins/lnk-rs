@@ -5,12 +5,16 @@ use getset::Getters;
 
 use crate::{binread_flags::binread_flags, strings::FixedSizeString};
 
+#[cfg(feature="lnk2json")]
+use serde::Serialize;
+
 bitflags! {
   /// A 16-bit, unsigned integer that specifies the fill attributes that
   /// control the foreground and background text colors in the console
   /// window. The following bit definitions can be combined to specify 16
   /// different values each for the foreground and background colors:
   #[derive(Clone, Debug, Eq, PartialEq)]
+  #[cfg_attr(feature = "lnk2json", derive(Serialize))]
   pub struct FillAttributeFlags: u16 {
     /// The foreground text color contains blue.
     const FOREGROUND_BLUE      = 0b0000_0000_0000_0001;
@@ -39,6 +43,7 @@ bitflags! {
   /// used in the console window. This value MUST be comprised of a font
   /// family and an optional font pitch.
   #[derive(Clone, Debug, Eq, PartialEq)]
+  #[cfg_attr(feature = "lnk2json", derive(Serialize))]
   pub struct FontFamilyFlags: u32 {
     /// The font family is unknown.
     const FF_DONT_CARE  = 0x0000;
@@ -70,6 +75,7 @@ binread_flags!(FontFamilyFlags, u32);
 /// when a link target specifies an application that is run in a console
 /// window.
 #[derive(Clone, Debug, Getters, BinRead)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 #[br(import(block_size: u32), pre_assert(block_size == 0x0000_00CC))]
 #[get(get = "pub")]
 #[allow(unused)]

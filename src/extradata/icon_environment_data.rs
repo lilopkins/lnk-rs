@@ -2,6 +2,9 @@ use binread::BinRead;
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use getset::Getters;
 
+#[cfg(feature="lnk2json")]
+use serde::Serialize;
+
 use crate::strings::FixedSizeString;
 
 
@@ -10,6 +13,7 @@ use crate::strings::FixedSizeString;
 /// it possible to find the icon across machines where the locations
 /// vary but are expressed using environment variables.
 #[derive(Clone, Debug, BinRead, Getters)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 #[br(import(block_size: u32), pre_assert(block_size == 0x0000_00314))]
 #[get(get = "pub")]
 #[allow(unused)]

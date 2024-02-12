@@ -1,5 +1,8 @@
 use std::{fmt, mem::size_of};
 
+#[cfg(feature="lnk2json")]
+use serde::Serialize;
+
 use binread::BinRead;
 use getset::Getters;
 
@@ -8,6 +11,7 @@ use getset::Getters;
 /// shell link.
 /// TODO: implement <https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-propstore/1eb58eb3-e7d8-4a09-ac0e-8bcb14b6fa0e>
 #[derive(Clone, BinRead, Getters)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 #[br(import(block_size: u32), pre_assert(block_size >= 0x0000_000C))]
 #[get(get="pub")]
 #[allow(unused)]

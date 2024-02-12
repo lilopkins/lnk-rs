@@ -11,6 +11,9 @@ use crate::{
     CurrentOffset,
 };
 
+#[cfg(feature="lnk2json")]
+use serde::Serialize;
+
 /// The LinkInfo structure specifies information necessary to resolve a
 /// linktarget if it is not found in its original location. This includes
 /// information about the volume that the target was stored on, the mapped
@@ -18,9 +21,11 @@ use crate::{
 /// if one existed when the linkwas created. For more details about UNC
 /// paths, see [MS-DFSNM] section 2.2.1.4
 #[derive(Debug, BinRead, Getters)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 #[get(get="pub")]
 #[allow(unused)]
 pub struct LinkInfo {
+    #[serde(skip)]
     start_offset: CurrentOffset,
 
     /// LinkInfoSize (4 bytes): A 32-bit, unsigned integer that specifies the
@@ -107,10 +112,11 @@ pub struct LinkInfo {
     #[br(
         seek_before(SeekFrom::Start((*start_offset.as_ref() + local_base_path_offset_unicode.unwrap_or(local_base_path_offset)).into())),
         if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH),
-        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)})
+        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        map=|o: Option<NullTerminatedString>| o.map(|n| n.to_string())
     )]
     #[getset(skip)]
-    local_base_path: Option<NullTerminatedString>,
+    local_base_path: Option<String>,
 
     /// An optional CommonNetworkRelativeLink structure (section 2.3.2) that
     /// specifies information about the network location where the link target
@@ -124,10 +130,11 @@ pub struct LinkInfo {
     /// target by being appended to the string in the LocalBasePath field.
     #[br(
         seek_before(SeekFrom::Start((*start_offset.as_ref() + common_path_suffix_offset_unicode.unwrap_or(common_path_suffix_offset)).into())),
-        args({common_path_suffix_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)})
+        args({common_path_suffix_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        map=|n: NullTerminatedString| n.to_string()
     )]
     #[getset(skip)]
-    common_path_suffix: NullTerminatedString,
+    common_path_suffix: String,
 
     /// An optional, NULL–terminated, Unicode string that is used to construct
     /// the full path to the link item or link target by appending the string
@@ -137,11 +144,13 @@ pub struct LinkInfo {
     #[br(
         if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH),
         seek_before(SeekFrom::Start((*start_offset.as_ref() + local_base_path_offset_unicode.unwrap_or(local_base_path_offset)).into())),
-        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)})
+        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        map=|o: Option<NullTerminatedString>| o.map(|n| n.to_string())
     )]
-    local_base_path_unicode: Option<NullTerminatedString>,
+    local_base_path_unicode: Option<String>,
     
     #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + link_info_size).into())))]
+    #[serde(skip)]
     _next_offset: CurrentOffset,
 }
 
@@ -242,6 +251,7 @@ bitflags! {
     /// Flags that specify whether the VolumeID, LocalBasePath, LocalBasePathUnicode,
     /// and CommonNetworkRelativeLink fields are present in this structure.
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    #[cfg_attr(feature = "lnk2json", derive(Serialize))]
     pub struct LinkInfoFlags: u32 {
         /// If set, the VolumeIDand LocalBasePath fields are present, and their
         /// locations are specified by the values of the VolumeIDOffset and
@@ -271,10 +281,12 @@ binread_flags!(LinkInfoFlags, u32);
 /// target was on when the link was created. This information is useful for
 /// resolving the link if the file is not found in its original location.
 #[derive(Clone, Debug, BinRead, Getters)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 #[get(get="pub")]
 #[allow(unused)]
 pub struct VolumeID {
     #[get(skip)]
+    #[serde(skip)]
     start_offset: CurrentOffset,
     /// VolumeIDSize (4 bytes): A 32-bit, unsigned integer that specifies the
     /// size, in bytes, of this structure. This value MUST be greater than
@@ -322,11 +334,14 @@ pub struct VolumeID {
     /// The label of the volume that the link target is stored on.
     #[br(
         seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_label_offset_unicode.unwrap_or(volume_label_offset)).into())),
-        args({volume_label_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}))]
+        args({volume_label_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        map=|s: NullTerminatedString| s.to_string()
+    )]
     #[getset(skip)]
-    volume_label: NullTerminatedString,
+    volume_label: String,
 
     #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_id_size).into())))]
+    #[serde(skip)]
     _next_offset: CurrentOffset,
 }
 
@@ -365,6 +380,7 @@ impl From<VolumeID> for Vec<u8> {
 
 /// A 32-bit, unsigned integer that specifies the type of drive the link target is stored on.
 #[derive(Clone, Debug, FromPrimitive, ToPrimitive, BinRead)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 #[br(repr(u32))]
 pub enum DriveType {
     /// The drive type cannot be determined.
@@ -389,8 +405,10 @@ pub enum DriveType {
 ///
 /// <https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/23bb5877-e3dd-4799-9f50-79f05f938537>
 #[derive(Clone, Debug, BinRead)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 #[allow(unused)]
 pub struct CommonNetworkRelativeLink {
+    #[serde(skip)]
     start_offset: CurrentOffset,
 
     /// CommonNetworkRelativeLinkSize (4 bytes): A 32-bit, unsigned integer
@@ -449,18 +467,23 @@ pub struct CommonNetworkRelativeLink {
     /// "\\server\share".
     #[br(
         seek_before(SeekFrom::Start((*start_offset.as_ref() + net_name_offset_unicode.unwrap_or(net_name_offset)).into())),
-        args({net_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}))]
-    net_name: NullTerminatedString,
+        args({net_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        map=|n: NullTerminatedString| n.to_string()
+    )]
+    net_name: String,
 
     /// A NULL–terminated string, as defined by the system default code
     /// page, which specifies a device; for example, the drive letter
     /// "D:".
     #[br(
         seek_before(SeekFrom::Start((*start_offset.as_ref() + device_name_offset_unicode.unwrap_or(device_name_offset)).into())),
-        args({device_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}))]
-    device_name: NullTerminatedString,
+        args({device_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        map=|n: NullTerminatedString| n.to_string()
+    )]
+    device_name: String,
 
     #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + common_network_relative_link_size).into())))]
+    #[serde(skip)]
     _next_offset: CurrentOffset,
 }
 /*
@@ -509,6 +532,7 @@ impl From<CommonNetworkRelativeLink> for Vec<u8> {
 bitflags! {
     /// Flags that specify the contents of the DeviceNameOffset and NetProviderType fields.
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    #[cfg_attr(feature = "lnk2json", derive(Serialize))]
     pub struct CommonNetworkRelativeLinkFlags: u32 {
         /// If set, the DeviceNameOffset field contains an offset to the device
         /// name. If not set, the DeviceNameOffset field does not contain an
@@ -526,6 +550,7 @@ binread_flags!(CommonNetworkRelativeLinkFlags, u32);
 /// A 32-bit, unsigned integer that specifies the type of network provider.
 #[allow(missing_docs)]
 #[derive(Clone, Debug, FromPrimitive, ToPrimitive, BinRead)]
+#[cfg_attr(feature = "lnk2json", derive(Serialize))]
 #[br(repr(u32))]
 pub enum NetworkProviderType {
     Avid = 0x1a0000,
