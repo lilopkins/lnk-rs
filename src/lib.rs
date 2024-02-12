@@ -32,7 +32,7 @@
 //! > **IMPORTANT!**: Writing capability is currently in a very early stage and probably won't work!
 
 use binread::BinReaderExt;
-#[cfg(feature="lnk2json")]
+#[cfg(feature="serde")]
 use serde::Serialize;
 use thiserror::Error;
 #[allow(unused)]
@@ -105,7 +105,7 @@ pub enum Error {
 
 /// A shell link
 #[derive(Debug)]
-#[cfg_attr(feature = "lnk2json", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 pub struct ShellLink {
     shell_link_header: header::ShellLinkHeader,
     linktarget_id_list: Option<linktarget::LinkTargetIdList>,

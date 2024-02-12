@@ -11,7 +11,7 @@ use crate::{
     CurrentOffset,
 };
 
-#[cfg(feature="lnk2json")]
+#[cfg(feature="serde")]
 use serde::Serialize;
 
 /// The LinkInfo structure specifies information necessary to resolve a
@@ -21,7 +21,7 @@ use serde::Serialize;
 /// if one existed when the linkwas created. For more details about UNC
 /// paths, see [MS-DFSNM] section 2.2.1.4
 #[derive(Debug, BinRead, Getters)]
-#[cfg_attr(feature = "lnk2json", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[get(get="pub")]
 #[allow(unused)]
 pub struct LinkInfo {
@@ -251,7 +251,7 @@ bitflags! {
     /// Flags that specify whether the VolumeID, LocalBasePath, LocalBasePathUnicode,
     /// and CommonNetworkRelativeLink fields are present in this structure.
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-    #[cfg_attr(feature = "lnk2json", derive(Serialize))]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
     pub struct LinkInfoFlags: u32 {
         /// If set, the VolumeIDand LocalBasePath fields are present, and their
         /// locations are specified by the values of the VolumeIDOffset and
@@ -281,7 +281,7 @@ binread_flags!(LinkInfoFlags, u32);
 /// target was on when the link was created. This information is useful for
 /// resolving the link if the file is not found in its original location.
 #[derive(Clone, Debug, BinRead, Getters)]
-#[cfg_attr(feature = "lnk2json", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[get(get="pub")]
 #[allow(unused)]
 pub struct VolumeID {
@@ -380,7 +380,7 @@ impl From<VolumeID> for Vec<u8> {
 
 /// A 32-bit, unsigned integer that specifies the type of drive the link target is stored on.
 #[derive(Clone, Debug, FromPrimitive, ToPrimitive, BinRead)]
-#[cfg_attr(feature = "lnk2json", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[br(repr(u32))]
 pub enum DriveType {
     /// The drive type cannot be determined.
@@ -405,7 +405,7 @@ pub enum DriveType {
 ///
 /// <https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/23bb5877-e3dd-4799-9f50-79f05f938537>
 #[derive(Clone, Debug, BinRead)]
-#[cfg_attr(feature = "lnk2json", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[allow(unused)]
 pub struct CommonNetworkRelativeLink {
     #[serde(skip)]
@@ -532,7 +532,7 @@ impl From<CommonNetworkRelativeLink> for Vec<u8> {
 bitflags! {
     /// Flags that specify the contents of the DeviceNameOffset and NetProviderType fields.
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-    #[cfg_attr(feature = "lnk2json", derive(Serialize))]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
     pub struct CommonNetworkRelativeLinkFlags: u32 {
         /// If set, the DeviceNameOffset field contains an offset to the device
         /// name. If not set, the DeviceNameOffset field does not contain an
@@ -550,7 +550,7 @@ binread_flags!(CommonNetworkRelativeLinkFlags, u32);
 /// A 32-bit, unsigned integer that specifies the type of network provider.
 #[allow(missing_docs)]
 #[derive(Clone, Debug, FromPrimitive, ToPrimitive, BinRead)]
-#[cfg_attr(feature = "lnk2json", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[br(repr(u32))]
 pub enum NetworkProviderType {
     Avid = 0x1a0000,

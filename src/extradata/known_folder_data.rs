@@ -1,7 +1,7 @@
 use binread::BinRead;
 use getset::Getters;
 
-#[cfg(feature="lnk2json")]
+#[cfg(feature="serde")]
 use serde::Serialize;
 
 use crate::Guid;
@@ -11,7 +11,7 @@ use crate::Guid;
 /// known folder to keep track of the folder so that the link target
 /// IDList can be translated when the link is loaded.
 #[derive(Clone, Copy, Debug, BinRead, Getters)]
-#[cfg_attr(feature = "lnk2json", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[br(import(block_size: u32), pre_assert(block_size == 0x0000_0001C))]
 #[get(get="pub")]
 #[allow(unused)]

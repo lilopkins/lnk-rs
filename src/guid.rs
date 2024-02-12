@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use binread::BinRead;
-#[cfg(feature="lnk2json")]
+#[cfg(feature="serde")]
 use serde::Serialize;
 use uuid::{Builder, Uuid};
 
@@ -36,7 +36,7 @@ impl Display for Guid {
     }
 }
 
-#[cfg(feature="lnk2json")]
+#[cfg(feature="serde")]
 impl Serialize for Guid {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

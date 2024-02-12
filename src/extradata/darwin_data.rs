@@ -2,7 +2,7 @@ use binread::BinRead;
 use encoding_rs::{UTF_16LE, WINDOWS_1252};
 use getset::Getters;
 
-#[cfg(feature="lnk2json")]
+#[cfg(feature="serde")]
 use serde::Serialize;
 
 use crate::strings::FixedSizeString;
@@ -11,7 +11,7 @@ use crate::strings::FixedSizeString;
 /// that can be used instead of a link target IDList to install an
 /// application when a shell link is activated.
 #[derive(Clone, Debug, BinRead, Getters)]
-#[cfg_attr(feature = "lnk2json", derive(Serialize))]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 #[br(import(block_size: u32), pre_assert(block_size == 0x0000_00314))]
 #[get(get = "pub")]
 #[allow(unused)]
