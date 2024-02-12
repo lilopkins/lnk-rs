@@ -8,6 +8,7 @@ use crate::strings::FixedSizeString;
 /// that can be used instead of a link target IDList to install an
 /// application when a shell link is activated.
 #[derive(Clone, Debug, BinRead, Getters)]
+#[br(import(block_size: u32), pre_assert(block_size == 0x0000_00314))]
 #[get(get = "pub")]
 #[allow(unused)]
 pub struct DarwinDataBlock {

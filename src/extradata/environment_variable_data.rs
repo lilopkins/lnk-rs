@@ -8,6 +8,7 @@ use crate::strings::FixedSizeString;
 /// environment variable information when the link target refers to
 /// a location that has a corresponding environment variable.
 #[derive(Clone, Debug, BinRead, Getters)]
+#[br(import(block_size: u32), pre_assert(block_size == 0x0000_0314))]
 #[get(get = "pub")]
 #[allow(unused)]
 pub struct EnvironmentVariableDataBlock {

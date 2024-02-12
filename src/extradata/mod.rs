@@ -80,25 +80,25 @@ pub mod vista_and_above_id_list_data;
 #[br(import(_block_size: u32))]
 pub enum ExtraDataBlock {
     #[br(magic = 0xa0000002u32)]
-    ConsoleProps(ConsoleDataBlock),
+    ConsoleProps(#[br(args(_block_size,))] ConsoleDataBlock),
     #[br(magic = 0xa0000004u32)]
-    ConsoleFeProps(ConsoleFEDataBlock),
+    ConsoleFeProps(#[br(args(_block_size,))] ConsoleFEDataBlock),
     #[br(magic = 0xa0000006u32)]
-    DarwinProps(DarwinDataBlock),
+    DarwinProps(#[br(args(_block_size,))] DarwinDataBlock),
     #[br(magic = 0xa0000001u32)]
-    EnvironmentProps(EnvironmentVariableDataBlock),
+    EnvironmentProps(#[br(args(_block_size,))] EnvironmentVariableDataBlock),
     #[br(magic = 0xa0000007u32)]
-    IconEnvironmentProps(IconEnvironmentDataBlock),
+    IconEnvironmentProps(#[br(args(_block_size,))] IconEnvironmentDataBlock),
     #[br(magic = 0xa000000bu32)]
-    KnownFolderProps(KnownFolderDataBlock),
+    KnownFolderProps(#[br(args(_block_size,))] KnownFolderDataBlock),
     #[br(magic = 0xa0000009u32)]
     PropertyStoreProps(#[br(args(_block_size,))] PropertyStoreDataBlock),
     #[br(magic = 0xa0000008u32)]
     ShimProps(#[br(args(_block_size,))] ShimDataBlock),
     #[br(magic = 0xa0000005u32)]
-    SpecialFolderProps(SpecialFolderDataBlock),
+    SpecialFolderProps(#[br(args(_block_size,))] SpecialFolderDataBlock),
     #[br(magic = 0xa0000003u32)]
-    TrackerProps(TrackerDataBlock),
+    TrackerProps(#[br(args(_block_size,))] TrackerDataBlock),
     #[br(magic = 0xa000000au32)]
     VistaAndAboveIdListProps(#[br(args(_block_size,))] VistaAndAboveIdListDataBlock),
 }
@@ -123,7 +123,9 @@ impl BinRead for ExtraData {
             if block_size == 0 {
                 break;
             } else {
+                println!("read extra_data block of size {block_size} as position {:x}", reader.stream_position()?);
                 let block: ExtraDataBlock = reader.read_le_args((block_size,))?;
+                println!("{block:?}");
                 blocks.push(block);
             }
         }

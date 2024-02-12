@@ -10,6 +10,7 @@ use crate::strings::FixedSizeString;
 /// it possible to find the icon across machines where the locations
 /// vary but are expressed using environment variables.
 #[derive(Clone, Debug, BinRead, Getters)]
+#[br(import(block_size: u32), pre_assert(block_size == 0x0000_00314))]
 #[get(get = "pub")]
 #[allow(unused)]
 pub struct IconEnvironmentDataBlock {

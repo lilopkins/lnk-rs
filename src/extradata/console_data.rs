@@ -70,6 +70,7 @@ binread_flags!(FontFamilyFlags, u32);
 /// when a link target specifies an application that is run in a console
 /// window.
 #[derive(Clone, Debug, Getters, BinRead)]
+#[br(import(block_size: u32), pre_assert(block_size == 0x0000_00CC))]
 #[get(get = "pub")]
 #[allow(unused)]
 pub struct ConsoleDataBlock {

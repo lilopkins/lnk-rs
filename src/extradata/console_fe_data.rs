@@ -5,6 +5,7 @@ use getset::Getters;
 /// for displaying text when a link target specifies an application
 /// that is run in a console window.
 #[derive(Clone, Copy, Debug, BinRead, Getters)]
+#[br(import(block_size: u32), pre_assert(block_size == 0x0000_0000C))]
 #[get(get="pub")]
 #[allow(unused)]
 pub struct ConsoleFEDataBlock {

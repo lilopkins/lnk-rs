@@ -6,6 +6,7 @@ use getset::Getters;
 /// special folder to keep track of the folder, so that the link target
 /// IDList can be translated when the link is loaded.
 #[derive(Clone, Copy, Debug, BinRead, Getters)]
+#[br(import(block_size: u32), pre_assert(block_size == 0x0000_00010))]
 #[get(get="pub")]
 #[allow(unused)]
 pub struct SpecialFolderDataBlock {
