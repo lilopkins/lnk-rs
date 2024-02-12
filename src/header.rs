@@ -75,14 +75,17 @@ pub struct ShellLinkHeader {
 
     /// A value that MUST be zero
     #[br(assert(reserved1 == 0))]
+    #[cfg_attr(feature = "serde", serde(skip))]
     reserved1: u16,
 
     /// A value that MUST be zero
     #[br(assert(reserved2 == 0))]
+    #[cfg_attr(feature = "serde", serde(skip))]
     reserved2: u32,
     
     /// A value that MUST be zero
     #[br(assert(reserved3 == 0))]
+    #[cfg_attr(feature = "serde", serde(skip))]
     reserved3: u32,
 }
 

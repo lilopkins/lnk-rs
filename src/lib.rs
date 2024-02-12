@@ -110,6 +110,7 @@ pub enum Error {
 #[cfg_attr(feature = "serde", derive(Serialize))]
 pub struct ShellLink {
     shell_link_header: header::ShellLinkHeader,
+    #[cfg_attr(feature = "serde", serde(skip))]
     linktarget_id_list: Option<linktarget::LinkTargetIdList>,
     link_info: Option<linkinfo::LinkInfo>,
     name_string: Option<String>,

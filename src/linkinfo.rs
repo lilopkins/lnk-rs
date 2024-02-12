@@ -27,7 +27,7 @@ use serde::Serialize;
 #[allow(unused)]
 #[br(import(default_codepage: &'static Encoding))]
 pub struct LinkInfo {
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     start_offset: CurrentOffset,
 
     /// LinkInfoSize (4 bytes): A 32-bit, unsigned integer that specifies the
@@ -158,7 +158,7 @@ pub struct LinkInfo {
     local_base_path_unicode: Option<String>,
     
     #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + link_info_size).into())))]
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     _next_offset: CurrentOffset,
 }
 
@@ -241,7 +241,7 @@ binread_flags!(LinkInfoFlags, u32);
 #[br(import(default_codepage: &'static Encoding))]
 pub struct VolumeID {
     #[get(skip)]
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     start_offset: CurrentOffset,
     /// VolumeIDSize (4 bytes): A 32-bit, unsigned integer that specifies the
     /// size, in bytes, of this structure. This value MUST be greater than
@@ -296,7 +296,7 @@ pub struct VolumeID {
     volume_label: String,
 
     #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_id_size).into())))]
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     _next_offset: CurrentOffset,
 }
 

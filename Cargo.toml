@@ -13,7 +13,7 @@ repository = "https://github.com/lilopkins/lnk-rs"
 [features]
 default = ["serde"]
 experimental_save = []
-serde=["dep:serde", "serde_json", "serde_bytes"]
+serde=["dep:serde", "serde_json"]
 lnk2json=["serde", "clap", "simplelog", "clap-verbosity-flag", "clio", "anyhow"]
 
 
@@ -46,7 +46,6 @@ winstructs = "0.3"
 
 serde = { version = "1.0", features = ["derive"], optional=true }
 serde_json = {version = "1", optional=true}
-serde_bytes = {version = "0", optional=true}
 
 clap = {version = "4", features = ["derive", "wrap_help", "cargo"], optional=true }
 simplelog = {version="0.12", optional=true}
