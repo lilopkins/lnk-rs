@@ -1,20 +1,17 @@
 use std::fmt;
 
-use binread::BinRead;
-use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
+use binread::{BinRead, BinReaderExt};
+use chrono::NaiveDateTime;
 
-#[cfg(feature="serde")]
+#[cfg(feature = "serde")]
 use serde::Serialize;
+use winstructs::timestamp::WinTimestamp;
 
 /// The FILETIME structure is a 64-bit value that represents the number of
 /// 100-nanosecond intervals that have elapsed since January 1, 1601,
 /// Coordinated Universal Time (UTC).
-#[derive(Clone, Copy, BinRead)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
-pub struct FileTime {
-    low_date_time: u32,
-    high_date_time: u32,
-}
+#[derive(Clone)]
+pub struct FileTime(WinTimestamp, u64);
 
 impl fmt::Debug for FileTime {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -22,25 +19,60 @@ impl fmt::Debug for FileTime {
     }
 }
 
-impl FileTime {
-    fn epoch() -> NaiveDateTime {
-        let epoch_date = NaiveDate::from_ymd_opt(1601, 1, 1).unwrap();
-        let epoch_time = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
-        NaiveDateTime::new(epoch_date, epoch_time)
-    }
+impl BinRead for FileTime {
+    type Args = ();
 
+    fn read_options<R: std::io::prelude::Read + std::io::prelude::Seek>(
+        reader: &mut R,
+        _options: &binread::ReadOptions,
+        _args: Self::Args,
+    ) -> binread::prelude::BinResult<Self> {
+        let pos = reader.stream_position()?;
+        let raw: u64 = reader.read_le()?;
+
+        match WinTimestamp::new(&raw.to_le_bytes()) {
+            Ok(timestamp) => Ok(Self(timestamp, raw)),
+            Err(why) => Err(binread::Error::AssertFail {
+                pos,
+                message: format!("{why}"),
+            }),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for FileTime {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!("{}", self.0))
+    }
+}
+
+impl FileTime {
     /// Convert the `FileTime` object to a [[]]
     pub fn datetime(&self) -> NaiveDateTime {
-        let hundred_nanos_after_epoch: u64 = Self::into(*self);
-        Self::epoch() + Duration::microseconds((hundred_nanos_after_epoch as f64 / 10f64) as i64)
+        self.0.to_datetime().naive_utc()
     }
 
+    /*
     /// Create a new `FileTime` object representing now.
     pub fn now() -> Self {
         Self::from(chrono::Local::now().naive_local())
     }
+     */
 }
 
+impl Default for FileTime {
+    fn default() -> Self {
+        let raw = 0u64;
+        let timestamp = WinTimestamp::new(&raw.to_le_bytes()).unwrap();
+        Self(timestamp, raw)
+    }
+}
+
+/*
 impl From<NaiveDateTime> for FileTime {
     fn from(value: NaiveDateTime) -> Self {
         let duration = value - Self::epoch();
@@ -49,20 +81,10 @@ impl From<NaiveDateTime> for FileTime {
         Self::from(val)
     }
 }
-
-impl From<u64> for FileTime {
-    fn from(value: u64) -> Self {
-        let low_date_time = (value & 0xFFFF_FFFF) as u32;
-        let high_date_time = ((value >> 32) & 0xFFFF_FFFF) as u32;
-        Self {
-            low_date_time,
-            high_date_time,
-        }
-    }
-}
+ */
 
 impl From<FileTime> for u64 {
     fn from(val: FileTime) -> Self {
-        u64::from(val.low_date_time) + (u64::from(val.high_date_time) << 32)
+        val.1
     }
 }
