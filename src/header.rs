@@ -13,9 +13,9 @@ use serde::Serialize;
 use  crate::binread_flags::*;
 
 use crate::FileTime;
+use crate::Guid;
 
 #[allow(clippy::unusual_byte_groupings)]
-const CLSID: u128 = 0x460000000000_00c0_0000_0000_00021401;
 
 /// A ShellLinkHeader structure (section 2.1), which contains identification
 /// information, timestamps, and flags that specify the presence of optional
@@ -30,8 +30,9 @@ pub struct ShellLinkHeader {
     #[br(assert(header_size == 0x0000_004c))]
     header_size: u32,
 
-    #[br(assert(link_clsid == CLSID))]
-    link_clsid: u128,
+    /// This value MUST be 00021401-0000-0000-C000-000000000046.
+    #[br(assert(link_clsid == Guid::from(uuid::uuid!("00021401-0000-0000-C000-000000000046"))))]
+    link_clsid: Guid,
     /// A LinkFlags structure (section 2.1.1) that specifies information about the shell link and
     /// the presence of optional portions of the structure.
     link_flags: LinkFlags,
@@ -97,7 +98,7 @@ impl Default for ShellLinkHeader {
     fn default() -> Self {
         Self {
             header_size: size_of::<Self>() as u32,
-            link_clsid: CLSID,
+            link_clsid: Guid::from(uuid::uuid!("00021401-0000-0000-C000-000000000046")),
             link_flags: LinkFlags::IS_UNICODE,
             file_attributes: FileAttributeFlags::FILE_ATTRIBUTE_NORMAL,
             creation_time: FileTime::now(),
@@ -119,7 +120,7 @@ impl From<ShellLinkHeader> for [u8; 0x4c] {
     fn from(val: ShellLinkHeader) -> Self {
         let mut header_data = [0u8; 0x4c];
         LE::write_u32(&mut header_data[0..], 0x4c);
-        LE::write_u128(&mut header_data[4..], CLSID);
+        LE::write_u128(&mut header_data[4..], uuid::uuid!("00021401-0000-0000-C000-000000000046").to_u128_le());
         LE::write_u32(&mut header_data[20..], val.link_flags.bits());
         LE::write_u32(&mut header_data[24..], val.file_attributes.bits());
         LE::write_u64(&mut header_data[28..], val.creation_time.into());

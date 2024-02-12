@@ -6,8 +6,14 @@ use serde::Serialize;
 use uuid::{Builder, Uuid};
 
 /// wraps a UUID
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Guid(Uuid);
+
+impl From<Uuid> for Guid {
+    fn from(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+}
 
 impl BinRead for Guid {
     type Args = ();

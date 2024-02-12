@@ -301,23 +301,6 @@ impl ShellLink {
         }
 
         let string_data: StringData = reader.read_le_args((link_flags,))?;
-
-        if let Some(name_string) = string_data.name_string().as_ref() {
-            println!("found name_string   {name_string}");
-        }
-        if let Some(relative_path) = string_data.relative_path().as_ref() {
-            println!("found relative_path {relative_path}");
-        }
-        if let Some(working_dir) = string_data.working_dir().as_ref() {
-            println!("found working_dir   {working_dir}");
-        }
-        if let Some(command_line_arguments) = string_data.command_line_arguments().as_ref() {
-            println!("found command_line_arguments {command_line_arguments}");
-        }
-        if let Some(icon_location) = string_data.icon_location().as_ref() {
-            println!("found icon_location {icon_location}");
-        }
-
         let extra_data: ExtraData = reader.read_le()?;
 
         Ok(Self {

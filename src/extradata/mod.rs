@@ -128,9 +128,7 @@ impl BinRead for ExtraData {
             if block_size == 0 {
                 break;
             } else {
-                println!("read extra_data block of size {block_size} as position {:x}", reader.stream_position()?);
                 let block: ExtraDataBlock = reader.read_le_args((block_size,))?;
-                println!("{block:?}");
                 blocks.push(block);
             }
         }
