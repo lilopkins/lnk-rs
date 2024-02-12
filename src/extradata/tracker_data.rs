@@ -1,7 +1,7 @@
 use binread::BinRead;
-use encoding_rs::WINDOWS_1252;
+use encoding_rs::Encoding;
 
-#[cfg(feature="serde")]
+#[cfg(feature = "serde")]
 use serde::Serialize;
 
 use crate::{strings::FixedSizeString, Guid};
@@ -12,7 +12,7 @@ use crate::{strings::FixedSizeString, Guid};
 /// Tracking service [MS-DLTW] to find the link target.
 #[derive(Clone, Debug, BinRead)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
-#[br(import(block_size: u32), pre_assert(block_size == 0x0000_00060))]
+#[br(import(block_size: u32, default_codepage: &'static Encoding), pre_assert(block_size == 0x0000_00060))]
 #[allow(unused)]
 pub struct TrackerDataBlock {
     /// A 32-bit, unsigned integer that specifies the size of the rest of the
@@ -28,7 +28,7 @@ pub struct TrackerDataBlock {
     /// A NULL–terminated character string, as defined by the system default
     /// code page, which specifies the NetBIOS name of the machine where
     /// the link target was last known to reside.
-    #[br(args(16, WINDOWS_1252), map=|s:FixedSizeString| s.to_string())]
+    #[br(args(16, default_codepage), map=|s:FixedSizeString| s.to_string())]
     machine_id: String,
     /// Two values in GUID packet representation ([MS-DTYP] section 2.3.4.2)
     /// that are used to find the link target with the Link Tracking service,

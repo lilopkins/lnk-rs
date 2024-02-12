@@ -2,6 +2,7 @@ use std::io::SeekFrom;
 
 use binread::BinRead;
 use bitflags::bitflags;
+use encoding_rs::Encoding;
 use getset::Getters;
 use num_derive::{FromPrimitive, ToPrimitive};
 
@@ -24,6 +25,7 @@ use serde::Serialize;
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[get(get="pub")]
 #[allow(unused)]
+#[br(import(default_codepage: &'static Encoding))]
 pub struct LinkInfo {
     #[serde(skip)]
     start_offset: CurrentOffset,
@@ -101,8 +103,11 @@ pub struct LinkInfo {
     /// information about the volume that the link target was on when the link
     /// was created. This field is present if the VolumeIDAndLocalBasePath
     /// flag is set.
-    #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_id_offset).into())),
-        if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH))]
+    #[br(
+        seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_id_offset).into())),
+        if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH),
+        args(default_codepage)
+    )]
     volume_id: Option<VolumeID>,
 
     /// An optional, NULL–terminated string, defined by the system default code
@@ -112,7 +117,7 @@ pub struct LinkInfo {
     #[br(
         seek_before(SeekFrom::Start((*start_offset.as_ref() + local_base_path_offset_unicode.unwrap_or(local_base_path_offset)).into())),
         if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH),
-        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
         map=|o: Option<NullTerminatedString>| o.map(|n| n.to_string())
     )]
     #[getset(skip)]
@@ -121,8 +126,11 @@ pub struct LinkInfo {
     /// An optional CommonNetworkRelativeLink structure (section 2.3.2) that
     /// specifies information about the network location where the link target
     /// is stored.
-    #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + common_network_relative_link_offset).into())),
-        if(link_info_flags & LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX))]
+    #[br(
+        seek_before(SeekFrom::Start((*start_offset.as_ref() + common_network_relative_link_offset).into())),
+        if(link_info_flags & LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX),
+        args(default_codepage)
+    )]
     common_network_relative_link: Option<CommonNetworkRelativeLink>,
     
     /// A NULL–terminated string, defined by the system default code page,
@@ -130,7 +138,7 @@ pub struct LinkInfo {
     /// target by being appended to the string in the LocalBasePath field.
     #[br(
         seek_before(SeekFrom::Start((*start_offset.as_ref() + common_path_suffix_offset_unicode.unwrap_or(common_path_suffix_offset)).into())),
-        args({common_path_suffix_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        args({common_path_suffix_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
         map=|n: NullTerminatedString| n.to_string()
     )]
     #[getset(skip)]
@@ -144,7 +152,7 @@ pub struct LinkInfo {
     #[br(
         if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH),
         seek_before(SeekFrom::Start((*start_offset.as_ref() + local_base_path_offset_unicode.unwrap_or(local_base_path_offset)).into())),
-        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
         map=|o: Option<NullTerminatedString>| o.map(|n| n.to_string())
     )]
     local_base_path_unicode: Option<String>,
@@ -183,60 +191,6 @@ impl Default for LinkInfo {
             local_base_path_unicode: None,
             common_path_suffix_unicode: None,
         }
-    }
-}
-impl From<&[u8]> for LinkInfo {
-    fn from(data: &[u8]) -> Self {
-        let mut link_info = Self::default();
-
-        link_info.size = LE::read_u32(data);
-        let header_size = LE::read_u32(&data[4..]);
-        let extra_offsets_specified = header_size >= 0x24;
-        let flags = LinkInfoFlags::from_bits_truncate(LE::read_u32(&data[8..]));
-        let volume_id_offset = LE::read_u32(&data[12..]) as usize;
-        let local_base_path_offset = LE::read_u32(&data[16..]) as usize;
-        let common_network_relative_link_offset = LE::read_u32(&data[20..]) as usize;
-        let common_path_suffix_offset = LE::read_u32(&data[24..]) as usize;
-        let mut local_base_path_offset_unicode = 0;
-        if extra_offsets_specified {
-            local_base_path_offset_unicode = LE::read_u32(&data[28..]) as usize;
-            let common_path_suffix_offset_unicode = LE::read_u32(&data[32..]) as usize;
-
-            if common_path_suffix_offset_unicode != 0 {
-                link_info.common_path_suffix_unicode = Some(strings::trim_nul_terminated_string(
-                    String::from_utf8_lossy(&data[common_path_suffix_offset_unicode..]).to_string(),
-                ));
-            }
-        }
-        if flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH
-            == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH
-        {
-            assert_ne!(volume_id_offset, 0);
-            assert_ne!(local_base_path_offset, 0);
-            link_info.volume_id = Some(VolumeID::from(&data[volume_id_offset..]));
-            link_info.local_base_path = Some(strings::trim_nul_terminated_string(
-                String::from_utf8_lossy(&data[local_base_path_offset..]).to_string(),
-            ));
-
-            if local_base_path_offset_unicode != 0 {
-                link_info.local_base_path_unicode = Some(strings::trim_nul_terminated_string(
-                    String::from_utf8_lossy(&data[local_base_path_offset_unicode..]).to_string(),
-                ));
-            }
-        }
-        if flags & LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX
-            == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX
-        {
-            assert_ne!(common_network_relative_link_offset, 0);
-            link_info.common_network_relative_link = Some(CommonNetworkRelativeLink::from(
-                &data[common_network_relative_link_offset..],
-            ));
-        }
-        link_info.common_path_suffix = strings::trim_nul_terminated_string(
-            String::from_utf8_lossy(&data[common_path_suffix_offset..]).to_string(),
-        );
-
-        link_info
     }
 }
  */
@@ -284,6 +238,7 @@ binread_flags!(LinkInfoFlags, u32);
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[get(get="pub")]
 #[allow(unused)]
+#[br(import(default_codepage: &'static Encoding))]
 pub struct VolumeID {
     #[get(skip)]
     #[serde(skip)]
@@ -334,7 +289,7 @@ pub struct VolumeID {
     /// The label of the volume that the link target is stored on.
     #[br(
         seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_label_offset_unicode.unwrap_or(volume_label_offset)).into())),
-        args({volume_label_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        args({volume_label_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
         map=|s: NullTerminatedString| s.to_string()
     )]
     #[getset(skip)]
@@ -407,6 +362,7 @@ pub enum DriveType {
 #[derive(Clone, Debug, BinRead)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[allow(unused)]
+#[br(import(default_codepage: &'static Encoding))]
 pub struct CommonNetworkRelativeLink {
     #[serde(skip)]
     start_offset: CurrentOffset,
@@ -467,7 +423,7 @@ pub struct CommonNetworkRelativeLink {
     /// "\\server\share".
     #[br(
         seek_before(SeekFrom::Start((*start_offset.as_ref() + net_name_offset_unicode.unwrap_or(net_name_offset)).into())),
-        args({net_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        args({net_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
         map=|n: NullTerminatedString| n.to_string()
     )]
     net_name: String,
@@ -477,7 +433,7 @@ pub struct CommonNetworkRelativeLink {
     /// "D:".
     #[br(
         seek_before(SeekFrom::Start((*start_offset.as_ref() + device_name_offset_unicode.unwrap_or(device_name_offset)).into())),
-        args({device_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage)}),
+        args({device_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
         map=|n: NullTerminatedString| n.to_string()
     )]
     device_name: String,

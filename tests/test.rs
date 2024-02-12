@@ -2,6 +2,7 @@ const TEST_FILE_NAME: &str = "tests/test.lnk";
 const TEST_BLANK_FILE_NAME: &str = "tests/blank.txt";
 
 use chrono::NaiveDate;
+use encoding_rs::WINDOWS_1252;
 use lnk::*;
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
@@ -10,7 +11,7 @@ use log::{debug, error, info, trace, warn};
 fn test_lnk_header() {
     let _ = pretty_env_logger::try_init();
 
-    let shortcut = ShellLink::open(TEST_FILE_NAME).unwrap();
+    let shortcut = ShellLink::open(TEST_FILE_NAME, WINDOWS_1252).unwrap();
     debug!("{:#?}", shortcut);
 
     assert_eq!(
@@ -76,7 +77,7 @@ fn test_lnk_header() {
 fn test_no_panic_reading_other_filetypes() {
     let _ = pretty_env_logger::try_init();
 
-    let res = ShellLink::open(TEST_BLANK_FILE_NAME);
+    let res = ShellLink::open(TEST_BLANK_FILE_NAME, WINDOWS_1252);
     // Shouldn't have panicked by now!
     assert!(res.is_err());
 }

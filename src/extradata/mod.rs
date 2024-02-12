@@ -1,4 +1,5 @@
 use binread::{BinRead, BinReaderExt};
+use encoding_rs::Encoding;
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
@@ -81,30 +82,30 @@ pub mod vista_and_above_id_list_data;
 #[allow(missing_docs)]
 #[derive(Clone, Debug, BinRead)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
-#[br(import(_block_size: u32))]
+#[br(import(_block_size: u32, _default_codepage: &'static Encoding))]
 pub enum ExtraDataBlock {
     #[br(magic = 0xa0000002u32)]
-    ConsoleProps(#[br(args(_block_size,))] ConsoleDataBlock),
+    ConsoleProps(#[br(args(_block_size))] ConsoleDataBlock),
     #[br(magic = 0xa0000004u32)]
-    ConsoleFeProps(#[br(args(_block_size,))] ConsoleFEDataBlock),
+    ConsoleFeProps(#[br(args(_block_size))] ConsoleFEDataBlock),
     #[br(magic = 0xa0000006u32)]
-    DarwinProps(#[br(args(_block_size,))] DarwinDataBlock),
+    DarwinProps(#[br(args(_block_size,_default_codepage))] DarwinDataBlock),
     #[br(magic = 0xa0000001u32)]
-    EnvironmentProps(#[br(args(_block_size,))] EnvironmentVariableDataBlock),
+    EnvironmentProps(#[br(args(_block_size,_default_codepage))] EnvironmentVariableDataBlock),
     #[br(magic = 0xa0000007u32)]
-    IconEnvironmentProps(#[br(args(_block_size,))] IconEnvironmentDataBlock),
+    IconEnvironmentProps(#[br(args(_block_size,_default_codepage))] IconEnvironmentDataBlock),
     #[br(magic = 0xa000000bu32)]
-    KnownFolderProps(#[br(args(_block_size,))] KnownFolderDataBlock),
+    KnownFolderProps(#[br(args(_block_size))] KnownFolderDataBlock),
     #[br(magic = 0xa0000009u32)]
-    PropertyStoreProps(#[br(args(_block_size,))] PropertyStoreDataBlock),
+    PropertyStoreProps(#[br(args(_block_size))] PropertyStoreDataBlock),
     #[br(magic = 0xa0000008u32)]
-    ShimProps(#[br(args(_block_size,))] ShimDataBlock),
+    ShimProps(#[br(args(_block_size))] ShimDataBlock),
     #[br(magic = 0xa0000005u32)]
-    SpecialFolderProps(#[br(args(_block_size,))] SpecialFolderDataBlock),
+    SpecialFolderProps(#[br(args(_block_size))] SpecialFolderDataBlock),
     #[br(magic = 0xa0000003u32)]
-    TrackerProps(#[br(args(_block_size,))] TrackerDataBlock),
+    TrackerProps(#[br(args(_block_size,_default_codepage))] TrackerDataBlock),
     #[br(magic = 0xa000000au32)]
-    VistaAndAboveIdListProps(#[br(args(_block_size,))] VistaAndAboveIdListDataBlock),
+    VistaAndAboveIdListProps(#[br(args(_block_size))] VistaAndAboveIdListDataBlock),
 }
 
 #[derive(Default, Debug)]
@@ -115,12 +116,12 @@ pub struct ExtraData {
 }
 
 impl BinRead for ExtraData {
-    type Args = ();
+    type Args = (&'static Encoding,);
 
     fn read_options<R: std::io::prelude::Read + std::io::prelude::Seek>(
         reader: &mut R,
         _options: &binread::ReadOptions,
-        _args: Self::Args,
+        args: Self::Args,
     ) -> binread::prelude::BinResult<Self> {
         let mut blocks = Vec::new();
         loop {
@@ -128,7 +129,7 @@ impl BinRead for ExtraData {
             if block_size == 0 {
                 break;
             } else {
-                let block: ExtraDataBlock = reader.read_le_args((block_size,))?;
+                let block: ExtraDataBlock = reader.read_le_args((block_size,args.0))?;
                 blocks.push(block);
             }
         }

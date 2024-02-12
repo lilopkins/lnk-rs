@@ -1,17 +1,18 @@
 use crate::{strings::{SizedString, StringEncoding}, LinkFlags};
 use binread::BinRead;
+use encoding_rs::Encoding;
 use getset::Getters;
 
 #[derive(BinRead, Getters)]
 #[getset(get="pub")]
-#[br(import(link_flags: LinkFlags))]
+#[br(import(link_flags: LinkFlags, default_codepage: &'static Encoding))]
 pub struct StringData {
     /// NAME_STRING: An optional structure that specifies a description of the
     /// shortcut that is displayed to end users to identify the purpose of the
     /// shell link. This structure MUST be present if the HasName flag is set.
     #[br(
         if(link_flags & LinkFlags::HAS_NAME == LinkFlags::HAS_NAME),
-        args(StringEncoding::from(link_flags)),
+        args(StringEncoding::from(link_flags, default_codepage)),
         map=|s: Option<SizedString>|s.map(|t| t.to_string())
     )]
     name_string: Option<String>,
@@ -22,7 +23,7 @@ pub struct StringData {
     /// structure MUST be present if the HasRelativePath flag is set.
     #[br(
         if(link_flags & LinkFlags::HAS_RELATIVE_PATH == LinkFlags::HAS_RELATIVE_PATH),
-        args(StringEncoding::from(link_flags)),
+        args(StringEncoding::from(link_flags, default_codepage)),
         map=|s: Option<SizedString>|s.map(|t| t.to_string())
     )]
     relative_path: Option<String>,
@@ -32,7 +33,7 @@ pub struct StringData {
     /// This structure MUST be present if the HasWorkingDir flag is set.
     #[br(
         if(link_flags & LinkFlags::HAS_WORKING_DIR == LinkFlags::HAS_WORKING_DIR),
-        args(StringEncoding::from(link_flags)),
+        args(StringEncoding::from(link_flags, default_codepage)),
         map=|s: Option<SizedString>|s.map(|t| t.to_string())
     )]
     working_dir: Option<String>,
@@ -42,7 +43,7 @@ pub struct StringData {
     /// target. This structure MUST be present if the HasArguments flag is set.
     #[br(
         if(link_flags & LinkFlags::HAS_ARGUMENTS == LinkFlags::HAS_ARGUMENTS),
-        args(StringEncoding::from(link_flags)),
+        args(StringEncoding::from(link_flags, default_codepage)),
         map=|s: Option<SizedString>|s.map(|t| t.to_string())
     )]
     command_line_arguments: Option<String>,
@@ -52,7 +53,7 @@ pub struct StringData {
     /// structure MUST be present if the HasIconLocation flag is set.
     #[br(
         if(link_flags & LinkFlags::HAS_ICON_LOCATION == LinkFlags::HAS_ICON_LOCATION),
-        args(StringEncoding::from(link_flags)),
+        args(StringEncoding::from(link_flags, default_codepage)),
         map=|s: Option<SizedString>|s.map(|t| t.to_string())
     )]
     icon_location: Option<String>,

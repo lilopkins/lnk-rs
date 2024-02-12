@@ -1,11 +1,10 @@
 use std::fmt::Display;
 
 use binread::{BinRead, BinReaderExt};
-use encoding_rs::{UTF_16LE, WINDOWS_1252};
+use encoding_rs::UTF_16LE;
 use log::trace;
 
 use crate::StringEncoding;
-
 
 /// represents a string which is not NULL-terminated,
 /// but whose length is known. The first 2 byte of the binary
@@ -28,10 +27,10 @@ impl BinRead for SizedString {
         );
 
         match args.0 {
-            StringEncoding::CodePage => {
+            StringEncoding::CodePage(default_encoding) => {
                 let mut buffer = vec![0; count_characters.into()];
                 reader.read_exact(&mut buffer)?;
-                let (cow, _, had_errors) = WINDOWS_1252.decode(&buffer);
+                let (cow, _, had_errors) = default_encoding.decode(&buffer);
                 if had_errors {
                     return Err(binread::error::Error::AssertFail {
                         pos: reader.stream_position()?,

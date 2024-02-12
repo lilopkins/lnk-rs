@@ -15,8 +15,9 @@
 //! A simple example appears as follows:
 //! ```
 //! use lnk::ShellLink;
+//! use encoding_rs::WINDOWS_1252;
 //! // ...
-//! let shortcut = lnk::ShellLink::open("tests/test.lnk").unwrap();
+//! let shortcut = lnk::ShellLink::open("tests/test.lnk", WINDOWS_1252).unwrap();
 //! println!("{:#?}", shortcut);
 //! ```
 //!
@@ -32,6 +33,7 @@
 //! > **IMPORTANT!**: Writing capability is currently in a very early stage and probably won't work!
 
 use binread::BinReaderExt;
+use encoding_rs::Encoding;
 #[cfg(feature="serde")]
 use serde::Serialize;
 use thiserror::Error;
@@ -269,7 +271,7 @@ impl ShellLink {
     }
 
     /// Open and parse a shell link
-    pub fn open<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Error> {
+    pub fn open<P: AsRef<std::path::Path>>(path: P, default_codepage: &'static Encoding) -> Result<Self, Error> {
         debug!("Opening {:?}", path.as_ref());
         let mut reader = BufReader::new(File::open(path)?);
         //let mut data = vec![];
@@ -295,13 +297,13 @@ impl ShellLink {
         let mut link_info = None;
         if link_flags.contains(LinkFlags::HAS_LINK_INFO) {
             debug!("LinkInfo is marked as present. Parsing now.");
-            let info: LinkInfo = reader.read_le()?;
+            let info: LinkInfo = reader.read_le_args((default_codepage,))?;
             debug!("{:?}", info);
             link_info = Some(info);
         }
 
-        let string_data: StringData = reader.read_le_args((link_flags,))?;
-        let extra_data: ExtraData = reader.read_le()?;
+        let string_data: StringData = reader.read_le_args((link_flags, default_codepage))?;
+        let extra_data: ExtraData = reader.read_le_args((default_codepage,))?;
 
         Ok(Self {
             shell_link_header,

@@ -1,5 +1,4 @@
 use binread::{BinRead, BinReaderExt, NullWideString};
-use encoding_rs::WINDOWS_1252;
 use core::fmt::Display;
 
 use crate::StringEncoding;
@@ -17,7 +16,7 @@ impl BinRead for NullTerminatedString {
         args: Self::Args,
     ) -> binread::prelude::BinResult<Self> {
         match args.0 {
-            StringEncoding::CodePage => {
+            StringEncoding::CodePage(default_codepage) => {
                 let mut buffer = Vec::new();
                 loop {
                     let c: u8 = reader.read_le()?;
@@ -27,7 +26,7 @@ impl BinRead for NullTerminatedString {
                         buffer.push(c);
                     }
                 }
-                let (cow, _, had_errors) = WINDOWS_1252.decode(&buffer);
+                let (cow, _, had_errors) = default_codepage.decode(&buffer);
                 if had_errors {
                     return Err(binread::error::Error::AssertFail {
                         pos: reader.stream_position()?,

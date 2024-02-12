@@ -1,5 +1,6 @@
 use clap::{Parser, ValueHint};
 use clio::Input;
+use encoding_rs::WINDOWS_1252;
 use lnk::ShellLink;
 use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
 
@@ -32,7 +33,7 @@ fn main() -> anyhow::Result<()> {
         anyhow::bail!("you did not specify a file");
     }
 
-    let shell_link = ShellLink::open(cli.input_file.path().path())?;
+    let shell_link = ShellLink::open(cli.input_file.path().path(), WINDOWS_1252)?;
 
     if cli.pretty {
         println!("{}", serde_json::to_string_pretty(&shell_link)?);
