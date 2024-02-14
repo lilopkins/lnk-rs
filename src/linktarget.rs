@@ -66,8 +66,7 @@ impl BinRead for IdList {
             
             // if the item has a size of zero, then this
             // is the terminator
-            if *item_id.size() == 0 {
-                assert_eq!(bytes_to_read, 2);
+            if bytes_to_read == 2 && *item_id.size() == 0 {
                 break;
             }
             
