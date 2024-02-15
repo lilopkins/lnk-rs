@@ -88,6 +88,12 @@ pub use guid::*;
 mod strings;
 pub use strings::*;
 
+mod idlist;
+pub use idlist::*;
+
+mod itemid;
+pub use itemid::*;
+
 #[macro_use]
 mod binread_flags;
 

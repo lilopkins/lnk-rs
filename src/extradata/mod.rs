@@ -13,6 +13,7 @@ use self::{
     property_store_data::PropertyStoreDataBlock, shim_data::ShimDataBlock,
     special_folder_data::SpecialFolderDataBlock, tracker_data::TrackerDataBlock,
     vista_and_above_id_list_data::VistaAndAboveIdListDataBlock,
+    shell_item_identifiers::ShellItemIdentifiers,
 };
 
 /// The ConsoleDataBlock structure specifies the display settings to use
@@ -77,35 +78,39 @@ pub mod vista_and_above_id_list_data;
 /// about a link target. These optional structures can be present in an extra
 /// data section that is appended to the basic Shell Link Binary File Format.
 ///
-/// At the moment, ExtraData can only be read, not written to shortcuts.
+/// At the moment, ExtraData can only be read, not written to shortcuts
+
+mod shell_item_identifiers;
 
 #[allow(missing_docs)]
 #[derive(Clone, Debug, BinRead)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[br(import(_block_size: u32, _default_codepage: &'static Encoding))]
 pub enum ExtraDataBlock {
-    #[br(magic = 0xa0000002u32)]
-    ConsoleProps(#[br(args(_block_size))] ConsoleDataBlock),
-    #[br(magic = 0xa0000004u32)]
-    ConsoleFeProps(#[br(args(_block_size))] ConsoleFEDataBlock),
-    #[br(magic = 0xa0000006u32)]
-    DarwinProps(#[br(args(_block_size,_default_codepage))] DarwinDataBlock),
     #[br(magic = 0xa0000001u32)]
     EnvironmentProps(#[br(args(_block_size,_default_codepage))] EnvironmentVariableDataBlock),
-    #[br(magic = 0xa0000007u32)]
-    IconEnvironmentProps(#[br(args(_block_size,_default_codepage))] IconEnvironmentDataBlock),
-    #[br(magic = 0xa000000bu32)]
-    KnownFolderProps(#[br(args(_block_size))] KnownFolderDataBlock),
-    #[br(magic = 0xa0000009u32)]
-    PropertyStoreProps(#[br(args(_block_size))] PropertyStoreDataBlock),
-    #[br(magic = 0xa0000008u32)]
-    ShimProps(#[br(args(_block_size))] ShimDataBlock),
-    #[br(magic = 0xa0000005u32)]
-    SpecialFolderProps(#[br(args(_block_size))] SpecialFolderDataBlock),
+    #[br(magic = 0xa0000002u32)]
+    ConsoleProps(#[br(args(_block_size))] ConsoleDataBlock),
     #[br(magic = 0xa0000003u32)]
     TrackerProps(#[br(args(_block_size,_default_codepage))] TrackerDataBlock),
+    #[br(magic = 0xa0000004u32)]
+    ConsoleFeProps(#[br(args(_block_size))] ConsoleFEDataBlock),
+    #[br(magic = 0xa0000005u32)]
+    SpecialFolderProps(#[br(args(_block_size))] SpecialFolderDataBlock),
+    #[br(magic = 0xa0000006u32)]
+    DarwinProps(#[br(args(_block_size,_default_codepage))] DarwinDataBlock),
+    #[br(magic = 0xa0000007u32)]
+    IconEnvironmentProps(#[br(args(_block_size,_default_codepage))] IconEnvironmentDataBlock),
+    #[br(magic = 0xa0000008u32)]
+    ShimProps(#[br(args(_block_size))] ShimDataBlock),
+    #[br(magic = 0xa0000009u32)]
+    PropertyStoreProps(#[br(args(_block_size))] PropertyStoreDataBlock),
     #[br(magic = 0xa000000au32)]
     VistaAndAboveIdListProps(#[br(args(_block_size))] VistaAndAboveIdListDataBlock),
+    #[br(magic = 0xa000000bu32)]
+    KnownFolderProps(#[br(args(_block_size))] KnownFolderDataBlock),
+    #[br(magic = 0xa000000cu32)]
+    ShellItemIdentifiers(#[br(args(_block_size))] ShellItemIdentifiers),
 }
 
 #[derive(Default, Debug)]

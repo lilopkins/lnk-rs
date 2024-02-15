@@ -1,4 +1,5 @@
 use binread::BinRead;
+use substring::Substring;
 use core::fmt::Display;
 use encoding_rs::Encoding;
 
@@ -28,7 +29,11 @@ impl BinRead for FixedSizeString {
                 ),
             });
         }
-        Ok(Self(cow.to_string()))
+        let mut res = cow.to_string();
+        if let Some(last_character) = res.find(|x| x == '\u{0000}') {
+            res = res.substring(0, last_character).to_string();
+        }
+        Ok(Self(res))
     }
 }
 

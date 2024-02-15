@@ -6,7 +6,7 @@ use getset::Getters;
 #[cfg(feature="serde")]
 use serde::Serialize;
 
-use crate::linktarget::IdList;
+use crate::IdList;
 
 /// The VistaAndAboveIDListDataBlock structure specifies an alternate
 /// IDList that can be used instead of the LinkTargetIDList structure
