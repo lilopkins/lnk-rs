@@ -379,8 +379,6 @@ pub enum DriveType {
 #[br(import(default_codepage: &'static Encoding))]
 pub struct CommonNetworkRelativeLink {
     #[serde(skip)]
-    start_offset: CurrentOffset,
-
     /// CommonNetworkRelativeLinkSize (4 bytes): A 32-bit, unsigned integer
     /// that specifies the size, in bytes, of the CommonNetworkRelativeLink
     /// structure. This value MUST be greater than or equal to 0x00000014. All
@@ -454,10 +452,11 @@ pub struct CommonNetworkRelativeLink {
     /// page, which specifies a device; for example, the drive letter
     /// "D:".
     #[br(
+        if(flags.has_valid_device()),
         args(StringEncoding::CodePage(default_codepage)),
-        map=|n: NullTerminatedString| n.to_string()
+        map=|n: Option<NullTerminatedString>| n.map(|s| s.to_string())
     )]
-    device_name: String,
+    device_name: Option<String>,
 
     /// An optional, NULL–terminated, Unicode string that is the Unicode
     /// version of the NetName string. This field MUST be present if the value
@@ -466,20 +465,20 @@ pub struct CommonNetworkRelativeLink {
     #[br(
         if(net_name_offset > 0x00000014),
         args(StringEncoding::Unicode),
-        map=|n: NullTerminatedString| n.to_string()
+        map=|n: Option<NullTerminatedString>| n.map(|s| s.to_string())
     )]
-    net_name_unicode: String,
+    net_name_unicode: Option<String>,
 
     /// An optional, NULL–terminated, Unicode string that is the Unicode
     /// version of the DeviceName string. This field MUST be present if the
     /// value of the NetNameOffset field is greater than 0x00000014; otherwise,
     /// this field MUST NOT be present.
     #[br(
-        if(net_name_offset > 0x00000014),
+        if(net_name_offset > 0x00000014 && flags.has_valid_device()),
         args(StringEncoding::Unicode),
-        map=|n: NullTerminatedString| n.to_string()
+        map=|n: Option<NullTerminatedString>| n.map(|s| s.to_string())
     )]
-    device_name_unicode: String,
+    device_name_unicode: Option<String>,
 }
 
 impl From<CommonNetworkRelativeLink> for Vec<u8> {
@@ -524,6 +523,7 @@ impl CommonNetworkRelativeLinkFlags {
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[br(repr(u32))]
 pub enum NetworkProviderType {
+    None = 0,
     MSNet = 0x00010000,
     Smb = 0x00020000,
     Netware = 0x00030000,
