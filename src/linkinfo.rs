@@ -518,11 +518,37 @@ impl CommonNetworkRelativeLinkFlags {
 }
 
 /// A 32-bit, unsigned integer that specifies the type of network provider.
+/// <https://learn.microsoft.com/de-de/windows/win32/api/winbase/ns-winbase-file_remote_protocol_info>
 #[allow(missing_docs)]
 #[derive(Clone, Debug, FromPrimitive, ToPrimitive, BinRead)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[br(repr(u32))]
 pub enum NetworkProviderType {
+    MSNet = 0x00010000,
+    Smb = 0x00020000,
+    Netware = 0x00030000,
+    Vines = 0x00040000,
+    TenNet = 0x00050000,
+    Locus = 0x00060000,
+    SunPCNFS = 0x00070000,
+    LanStep = 0x00080000,
+    NineTiles = 0x00090000,
+    Lantastic = 0x000A0000,
+    As400 = 0x000B0000,
+    FTPNFS = 0x000C0000,
+    PathWorks = 0x000D0000,
+    LifeNet = 0x000E0000,
+    PowerLAN = 0x000F0000,
+    BWNFS = 0x00100000,
+    Cogent = 0x00110000,
+    Farallon = 0x00120000,
+    AppleTalk = 0x00130000,
+    Intergraph = 0x00140000,
+    SymfoNet = 0x00150000,
+    ClearCase = 0x00160000,
+    Frontier = 0x00170000,
+    BMC = 0x00180000,
+    DCE = 0x00190000,
     Avid = 0x1a0000,
     Docuspace = 0x1b0000,
     Mangosoft = 0x1c0000,

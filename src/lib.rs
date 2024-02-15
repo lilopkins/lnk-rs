@@ -40,7 +40,7 @@ use thiserror::Error;
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
-use std::fs::File;
+use std::{fs::File, io::Seek};
 #[cfg(feature = "experimental_save")]
 use std::io::BufWriter;
 use std::io::BufReader;
@@ -289,7 +289,7 @@ impl ShellLink {
         let mut linktarget_id_list = None;
         let link_flags = *shell_link_header.link_flags();
         if link_flags.contains(LinkFlags::HAS_LINK_TARGET_ID_LIST) {
-            debug!("A LinkTargetIDList is marked as present. Parsing now.");
+            debug!("A LinkTargetIDList is marked as present. Parsing now at position 0x{:0x}", reader.stream_position()?);
             let list: LinkTargetIdList = reader.read_le()?;
             debug!("{:?}", list);
             linktarget_id_list = Some(list);
@@ -297,7 +297,7 @@ impl ShellLink {
 
         let mut link_info = None;
         if link_flags.contains(LinkFlags::HAS_LINK_INFO) {
-            debug!("LinkInfo is marked as present. Parsing now.");
+            debug!("LinkInfo is marked as present. Parsing now at position 0x{:0x}", reader.stream_position()?);
             let info: LinkInfo = reader.read_le_args((default_codepage,))?;
             debug!("{:?}", info);
             link_info = Some(info);
