@@ -1,5 +1,3 @@
-use std::io::SeekFrom;
-
 use binread::BinRead;
 use bitflags::bitflags;
 use encoding_rs::Encoding;
@@ -53,7 +51,15 @@ pub struct LinkInfo {
     /// location of the VolumeID field. If the VolumeIDAndLocalBasePath flag is
     /// set, this value is an offset, in bytes, from the start of the LinkInfo
     /// structure; otherwise, this value MUST be zero.
-    #[br(assert(if link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH{volume_id_offset > 0 && volume_id_offset < link_info_size} else {volume_id_offset == 0}))]
+    #[br(
+        assert(
+            if link_info_flags.has_volume_id_and_local_base_path() {
+                volume_id_offset > 0 && volume_id_offset < link_info_size
+            } else {
+                volume_id_offset == 0
+            }
+        )
+    )]
     volume_id_offset: u32,
 
     /// LocalBasePathOffset (4 bytes): A 32-bit, unsigned integer that
@@ -61,7 +67,15 @@ pub struct LinkInfo {
     /// VolumeIDAndLocalBasePath flag is set, this value is an offset, in
     /// bytes, from the start of the LinkInfo structure; otherwise, this value
     /// MUST be zero.
-    #[br(assert(if link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH{local_base_path_offset > 0 && local_base_path_offset < link_info_size} else {local_base_path_offset == 0}))]
+    #[br(
+        assert(
+            if link_info_flags.has_volume_id_and_local_base_path() {
+                local_base_path_offset > 0 && local_base_path_offset < link_info_size
+            } else {
+                local_base_path_offset == 0
+            }
+        )
+    )]
     local_base_path_offset: u32,
 
     /// CommonNetworkRelativeLinkOffset (4 bytes): A 32-bit, unsigned integer
@@ -69,13 +83,21 @@ pub struct LinkInfo {
     /// the CommonNetworkRelativeLinkAndPathSuffix flag is set, this value is
     /// an offset, in bytes, from the start of the LinkInfo structure;
     /// otherwise, this value MUST be zero.
-    #[br(assert(if link_info_flags & LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX{common_network_relative_link_offset > 0 && common_network_relative_link_offset < link_info_size} else {common_network_relative_link_offset == 0}))]
+    #[br(
+        assert(
+            if link_info_flags.has_common_network_relative_link_and_path_suffix() {
+                common_network_relative_link_offset > 0 && common_network_relative_link_offset < link_info_size
+            } else {
+                common_network_relative_link_offset == 0
+            }
+        )
+    )]
     common_network_relative_link_offset: u32,
 
     /// CommonPathSuffixOffset (4 bytes): A 32-bit, unsigned integer that
     /// specifies the location of the CommonPathSuffix field. This value is
     /// an offset, in bytes, from the start of the LinkInfo structure.
-    #[br(assert(common_path_suffix_offset < link_info_size))]
+    #[br(assert(common_path_suffix_offset < link_info_size && common_path_suffix_offset != 0))]
     common_path_suffix_offset: u32,
 
     /// LocalBasePathOffsetUnicode (4 bytes): An optional, 32-bit, unsigned
@@ -86,7 +108,18 @@ pub struct LinkInfo {
     /// LinkInfoHeaderSize field is greater than or equal to 0x00000024.
     #[br(
         if(link_info_header_size >= 0x24),
-        assert(if let Some(offset) = local_base_path_offset_unicode{ if link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH{offset > 0 && offset < link_info_size} else {false}} else {true}))]
+        assert(
+            if let Some(offset) = local_base_path_offset_unicode {
+                if link_info_flags.has_volume_id_and_local_base_path(){
+                    offset > 0 && offset < link_info_size
+                } else {
+                    false
+                }
+            } else {
+                true
+            }
+        )
+    )]
     local_base_path_offset_unicode: Option<u32>,
 
     /// CommonPathSuffixOffsetUnicode (4 bytes): An optional, 32-bit, unsigned
@@ -96,7 +129,16 @@ pub struct LinkInfo {
     /// LinkInfoHeaderSize field is greater than or equal to 0x00000024.
     #[br(
         if(link_info_header_size >= 0x24),
-        assert(if let Some(offset) = common_path_suffix_offset_unicode{ if link_info_flags & LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX{offset > 0 && offset < link_info_size} else {false}} else {true}))]
+        assert (
+            if let Some(offset) = common_path_suffix_offset_unicode {
+                if link_info_flags.has_common_network_relative_link_and_path_suffix() {
+                    offset > 0 && offset < link_info_size
+                } else {
+                    false
+                }
+            } else {true}
+        )
+    )]
     common_path_suffix_offset_unicode: Option<u32>,
 
     /// An optional VolumeID structure (section 2.3.1) that specifies
@@ -104,8 +146,8 @@ pub struct LinkInfo {
     /// was created. This field is present if the VolumeIDAndLocalBasePath
     /// flag is set.
     #[br(
-        seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_id_offset).into())),
-        if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH),
+        //seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_id_offset).into())),
+        if(link_info_flags.has_volume_id_and_local_base_path()),
         args(default_codepage)
     )]
     volume_id: Option<VolumeID>,
@@ -115,9 +157,8 @@ pub struct LinkInfo {
     /// target by appending the string in the CommonPathSuffix field. This
     /// field is present if the VolumeIDAndLocalBasePath flag is set.
     #[br(
-        seek_before(SeekFrom::Start((*start_offset.as_ref() + local_base_path_offset_unicode.unwrap_or(local_base_path_offset)).into())),
-        if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH),
-        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
+        if(link_info_flags.has_volume_id_and_local_base_path()),
+        args(StringEncoding::CodePage(default_codepage)),
         map=|o: Option<NullTerminatedString>| o.map(|n| n.to_string())
     )]
     #[getset(skip)]
@@ -127,8 +168,7 @@ pub struct LinkInfo {
     /// specifies information about the network location where the link target
     /// is stored.
     #[br(
-        seek_before(SeekFrom::Start((*start_offset.as_ref() + common_network_relative_link_offset).into())),
-        if(link_info_flags & LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX == LinkInfoFlags::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX),
+        if(link_info_flags.has_common_network_relative_link_and_path_suffix()),
         args(default_codepage)
     )]
     common_network_relative_link: Option<CommonNetworkRelativeLink>,
@@ -137,8 +177,8 @@ pub struct LinkInfo {
     /// which is used to construct the full path to the link item or link
     /// target by being appended to the string in the LocalBasePath field.
     #[br(
-        seek_before(SeekFrom::Start((*start_offset.as_ref() + common_path_suffix_offset_unicode.unwrap_or(common_path_suffix_offset)).into())),
-        args({common_path_suffix_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
+        if(common_path_suffix_offset != 0),
+        args(StringEncoding::CodePage(default_codepage)),
         map=|n: NullTerminatedString| n.to_string()
     )]
     #[getset(skip)]
@@ -150,16 +190,18 @@ pub struct LinkInfo {
     /// if the VolumeIDAndLocalBasePath flag is set and the value of the
     /// LinkInfoHeaderSize field is greater than or equal to 0x00000024.
     #[br(
-        if(link_info_flags & LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH == LinkInfoFlags::VOLUME_ID_AND_LOCAL_BASE_PATH),
-        seek_before(SeekFrom::Start((*start_offset.as_ref() + local_base_path_offset_unicode.unwrap_or(local_base_path_offset)).into())),
-        args({local_base_path_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
+        if(link_info_header_size >= 0x24 && link_info_flags.has_volume_id_and_local_base_path()),
+        args(StringEncoding::Unicode),
         map=|o: Option<NullTerminatedString>| o.map(|n| n.to_string())
     )]
     local_base_path_unicode: Option<String>,
-    
-    #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + link_info_size).into())))]
-    #[cfg_attr(feature = "serde", serde(skip))]
-    _next_offset: CurrentOffset,
+
+    #[br(
+        if(link_info_header_size >= 0x24 && common_path_suffix_offset_unicode.map(|o| o != 0).unwrap_or(false)),
+        args(StringEncoding::Unicode),
+        map=|o: Option<NullTerminatedString>| o.map(|n| n.to_string())
+    )]
+    common_path_suffix_unicode: Option<String>,
 }
 
 impl LinkInfo {
@@ -177,23 +219,6 @@ impl LinkInfo {
         self.common_path_suffix.as_ref()
     }
 }
-
-/*
-impl Default for LinkInfo {
-    fn default() -> Self {
-        Self {
-            size: 0,
-            _link_info_flags: LinkInfoFlags::empty(),
-            volume_id: None,
-            local_base_path: None,
-            common_network_relative_link: None,
-            common_path_suffix: String::new(),
-            local_base_path_unicode: None,
-            common_path_suffix_unicode: None,
-        }
-    }
-}
- */
 
 impl From<LinkInfo> for Vec<u8> {
     fn from(_val: LinkInfo) -> Self {
@@ -230,6 +255,17 @@ bitflags! {
 }
 
 binread_flags!(LinkInfoFlags, u32);
+
+#[allow(missing_docs)]
+impl LinkInfoFlags {
+    pub fn has_volume_id_and_local_base_path(&self) -> bool {
+        *self & Self::VOLUME_ID_AND_LOCAL_BASE_PATH == Self::VOLUME_ID_AND_LOCAL_BASE_PATH
+    }
+
+    pub fn has_common_network_relative_link_and_path_suffix(&self) -> bool {
+        *self & Self::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX == Self::COMMON_NETWORK_RELATIVE_LINK_AND_PATH_SUFFIX
+    }
+}
 
 /// The VolumeID structure specifies information about the volume that a link
 /// target was on when the link was created. This information is useful for
@@ -288,14 +324,12 @@ pub struct VolumeID {
 
     /// The label of the volume that the link target is stored on.
     #[br(
-        seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_label_offset_unicode.unwrap_or(volume_label_offset)).into())),
         args({volume_label_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
         map=|s: NullTerminatedString| s.to_string()
     )]
     #[getset(skip)]
     volume_label: String,
 
-    #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + volume_id_size).into())))]
     #[cfg_attr(feature = "serde", serde(skip))]
     _next_offset: CurrentOffset,
 }
@@ -306,26 +340,6 @@ impl VolumeID {
         self.volume_label.as_ref()
     }
 }
-/*
-impl From<&[u8]> for VolumeID {
-    fn from(data: &[u8]) -> Self {
-        let mut volume_id = VolumeID::default();
-
-        let _size = LE::read_u32(data);
-        volume_id.drive_type = DriveType::from_u32(LE::read_u32(&data[4..])).unwrap();
-        volume_id.drive_serial_number = LE::read_u32(&data[8..]);
-        let mut volume_label_offset = LE::read_u32(&data[12..]) as usize;
-        if volume_label_offset == 0x14 {
-            volume_label_offset /* _unicode */ = LE::read_u32(&data[16..]) as usize;
-        }
-        volume_id.volume_label = strings::trim_nul_terminated_string(
-            String::from_utf8_lossy(&data[volume_label_offset..]).to_string(),
-        );
-
-        volume_id
-    }
-}
- */
 
 impl From<VolumeID> for Vec<u8> {
     fn from(_val: VolumeID) -> Self {
@@ -391,14 +405,23 @@ pub struct CommonNetworkRelativeLink {
     /// this value is an offset, in bytes, from the start of the
     /// CommonNetworkRelativeLink structure; otherwise, this value MUST be
     /// zero.
-    #[br(assert(device_name_offset < common_network_relative_link_size))]
+    #[br(
+        assert(
+            device_name_offset < common_network_relative_link_size && 
+            if flags.has_valid_device() {
+                device_name_offset > 0
+            } else {
+                device_name_offset == 0
+            }
+        )
+    )]
     device_name_offset: u32,
 
     /// NetworkProviderType (4 bytes): A 32-bit, unsigned integer that
     /// specifies the type of network provider. If the ValidNetType flag is
     /// set, this value MUST be one of the following; otherwise, this value
     /// MUST be ignored.
-    #[br(map = |t| if flags & CommonNetworkRelativeLinkFlags::VALID_NET_TYPE == CommonNetworkRelativeLinkFlags::VALID_NET_TYPE {Some(t)} else {None})]
+    #[br(map = |t| if flags.has_valid_net_type() {Some(t)} else {None})]
     network_provider_type: Option<NetworkProviderType>,
 
     /// NetNameOffsetUnicode (4 bytes): An optional, 32-bit, unsigned integer
@@ -406,7 +429,7 @@ pub struct CommonNetworkRelativeLink {
     /// an offset, in bytes, from the start of the CommonNetworkRelativeLink
     /// structure. This field MUST be present if the value of the NetNameOffset
     /// field is greater than 0x00000014; otherwise, this field MUST NOT be present.
-    #[br(if(net_name_offset > 0x14))]
+    #[br(if(net_name_offset > 0x00000014))]
     net_name_offset_unicode: Option<u32>,
 
     /// DeviceNameOffsetUnicode (4 bytes): An optional, 32-bit, unsigned
@@ -415,15 +438,14 @@ pub struct CommonNetworkRelativeLink {
     /// CommonNetworkRelativeLink structure. This field MUST be present if the
     /// value of the NetNameOffset field is greater than 0x00000014; otherwise,
     /// this field MUST NOT be present.
-    #[br(if(net_name_offset > 0x14))]
+    #[br(if(net_name_offset > 0x00000014))]
     device_name_offset_unicode: Option<u32>,
 
     /// A NULL–terminated string, as defined by the system default code
     /// page, which specifies a server share path; for example,
     /// "\\server\share".
     #[br(
-        seek_before(SeekFrom::Start((*start_offset.as_ref() + net_name_offset_unicode.unwrap_or(net_name_offset)).into())),
-        args({net_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
+        args(StringEncoding::CodePage(default_codepage)),
         map=|n: NullTerminatedString| n.to_string()
     )]
     net_name: String,
@@ -432,52 +454,33 @@ pub struct CommonNetworkRelativeLink {
     /// page, which specifies a device; for example, the drive letter
     /// "D:".
     #[br(
-        seek_before(SeekFrom::Start((*start_offset.as_ref() + device_name_offset_unicode.unwrap_or(device_name_offset)).into())),
-        args({device_name_offset_unicode.and(Some(StringEncoding::Unicode)).unwrap_or(StringEncoding::CodePage(default_codepage))}),
+        args(StringEncoding::CodePage(default_codepage)),
         map=|n: NullTerminatedString| n.to_string()
     )]
     device_name: String,
 
-    #[br(seek_before(SeekFrom::Start((*start_offset.as_ref() + common_network_relative_link_size).into())))]
-    #[serde(skip)]
-    _next_offset: CurrentOffset,
-}
-/*
-impl From<&[u8]> for CommonNetworkRelativeLink {
-    fn from(data: &[u8]) -> Self {
-        let mut link = CommonNetworkRelativeLink::default();
+    /// An optional, NULL–terminated, Unicode string that is the Unicode
+    /// version of the NetName string. This field MUST be present if the value
+    /// of the NetNameOffset field is greater than 0x00000014; otherwise, this
+    /// field MUST NOT be present.
+    #[br(
+        if(net_name_offset > 0x00000014),
+        args(StringEncoding::Unicode),
+        map=|n: NullTerminatedString| n.to_string()
+    )]
+    net_name_unicode: String,
 
-        let size = LE::read_u32(data);
-        assert!(size >= 0x14);
-        link.flags = CommonNetworkRelativeLinkFlags::from_bits_truncate(LE::read_u32(&data[4..]));
-        let net_name_offset = LE::read_u32(&data[8..]) as usize;
-        let device_name_offset = LE::read_u32(&data[12..]) as usize;
-        if link.flags & CommonNetworkRelativeLinkFlags::VALID_NET_TYPE
-            == CommonNetworkRelativeLinkFlags::VALID_NET_TYPE
-        {
-            link.network_provider_type = NetworkProviderType::from_u32(LE::read_u32(&data[16..]));
-        }
-        link.net_name = strings::trim_nul_terminated_string(
-            String::from_utf8_lossy(&data[net_name_offset..]).to_string(),
-        );
-        link.device_name = strings::trim_nul_terminated_string(
-            String::from_utf8_lossy(&data[device_name_offset..]).to_string(),
-        );
-        if net_name_offset >= 0x14 {
-            let net_name_offset_unicode = LE::read_u32(&data[20..]) as usize;
-            let device_name_offset_unicode = LE::read_u32(&data[24..]) as usize;
-            link.net_name_unicode = Some(strings::trim_nul_terminated_string(
-                String::from_utf8_lossy(&data[net_name_offset_unicode..]).to_string(),
-            ));
-            link.device_name_unicode = Some(strings::trim_nul_terminated_string(
-                String::from_utf8_lossy(&data[device_name_offset_unicode..]).to_string(),
-            ));
-        }
-
-        link
-    }
+    /// An optional, NULL–terminated, Unicode string that is the Unicode
+    /// version of the DeviceName string. This field MUST be present if the
+    /// value of the NetNameOffset field is greater than 0x00000014; otherwise,
+    /// this field MUST NOT be present.
+    #[br(
+        if(net_name_offset > 0x00000014),
+        args(StringEncoding::Unicode),
+        map=|n: NullTerminatedString| n.to_string()
+    )]
+    device_name_unicode: String,
 }
- */
 
 impl From<CommonNetworkRelativeLink> for Vec<u8> {
     fn from(_val: CommonNetworkRelativeLink) -> Self {
@@ -502,6 +505,17 @@ bitflags! {
 }
 
 binread_flags!(CommonNetworkRelativeLinkFlags, u32);
+
+#[allow(missing_docs)]
+impl CommonNetworkRelativeLinkFlags {
+    pub fn has_valid_device(&self) -> bool {
+        *self & Self::VALID_DEVICE == Self::VALID_DEVICE
+    }
+
+    pub fn has_valid_net_type(&self) -> bool {
+        *self & Self::VALID_NET_TYPE == Self::VALID_NET_TYPE
+    }
+}
 
 /// A 32-bit, unsigned integer that specifies the type of network provider.
 #[allow(missing_docs)]
