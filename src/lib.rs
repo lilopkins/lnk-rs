@@ -351,7 +351,10 @@ impl ShellLink {
         &self.name_string
     }
 
-    /// returns the name of the link target
+    /// returns the full path of the link target. This information
+    /// is constructed completely from the LINK_INFO structure. So,
+    /// if the lnk file does not contain such a structure, the result
+    /// of this method will be `None`
     pub fn link_target(&self) -> Option<String> {
         if let Some(info) = self.link_info().as_ref() {
             let base_path = if info.link_info_flags().has_common_network_relative_link_and_path_suffix() {

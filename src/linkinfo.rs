@@ -27,9 +27,6 @@ use serde::Serialize;
 #[allow(unused)]
 #[br(import(default_codepage: &'static Encoding))]
 pub struct LinkInfo {
-    #[cfg_attr(feature = "serde", serde(skip))]
-    start_offset: CurrentOffset,
-
     /// LinkInfoSize (4 bytes): A 32-bit, unsigned integer that specifies the
     /// size, in bytes, of the LinkInfo structure. All offsets specified in
     /// this structure MUST be less than this value, and all strings contained
@@ -94,6 +91,12 @@ pub struct LinkInfo {
             }
         )
     )]
+
+    /// A 32-bit, unsigned integer that specifies the location of the
+    /// CommonNetworkRelativeLink field. If the
+    /// CommonNetworkRelativeLinkAndPathSuffix flag is set, this value is an
+    /// offset, in bytes, from the start of the LinkInfo structure; otherwise,
+    /// this value MUST be zero.
     common_network_relative_link_offset: u32,
 
     /// CommonPathSuffixOffset (4 bytes): A 32-bit, unsigned integer that
@@ -198,6 +201,11 @@ pub struct LinkInfo {
     )]
     local_base_path_unicode: Option<String>,
 
+    /// An optional, NULL–terminated, Unicode string that is used to construct
+    /// the full path to the link item or link target by being appended to the
+    /// string in the LocalBasePathUnicode field. This field can be present
+    /// only if the value of the LinkInfoHeaderSize field is greater than or
+    /// equal to 0x00000024.
     #[br(
         if(link_info_header_size >= 0x24 && common_path_suffix_offset_unicode.map(|o| o != 0).unwrap_or(false)),
         args(StringEncoding::Unicode),
@@ -490,6 +498,7 @@ impl From<CommonNetworkRelativeLink> for Vec<u8> {
 }
 
 impl CommonNetworkRelativeLink {
+    /// returns the name of this link
     pub fn name(&self) -> String {
         if self.flags.has_valid_device() {
             self.device_name_unicode.as_ref()
