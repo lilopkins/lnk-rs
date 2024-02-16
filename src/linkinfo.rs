@@ -1,3 +1,5 @@
+use core::panic;
+
 use binread::BinRead;
 use bitflags::bitflags;
 use encoding_rs::Encoding;
@@ -21,7 +23,7 @@ use serde::Serialize;
 /// paths, see [MS-DFSNM] section 2.2.1.4
 #[derive(Debug, BinRead, Getters)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
-#[get(get="pub")]
+#[getset(get="pub")]
 #[allow(unused)]
 #[br(import(default_codepage: &'static Encoding))]
 pub struct LinkInfo {
@@ -484,6 +486,23 @@ pub struct CommonNetworkRelativeLink {
 impl From<CommonNetworkRelativeLink> for Vec<u8> {
     fn from(_val: CommonNetworkRelativeLink) -> Self {
         unimplemented!()
+    }
+}
+
+impl CommonNetworkRelativeLink {
+    pub fn name(&self) -> String {
+        if self.flags.has_valid_device() {
+            self.device_name_unicode.as_ref()
+                .or(self.device_name.as_ref())
+                .expect("device name must be set, if VALID_DEVICE is set")
+                .to_string()
+        } else if self.flags.has_valid_net_type() {
+            self.net_name_unicode.as_ref()
+                .unwrap_or(&self.net_name)
+                .to_string()
+        } else {
+            panic!("either one of VALID_DEVICE or VALID_NET_TYPE must be set")
+        }
     }
 }
 

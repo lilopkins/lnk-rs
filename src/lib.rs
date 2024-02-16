@@ -351,6 +351,36 @@ impl ShellLink {
         &self.name_string
     }
 
+    /// returns the name of the link target
+    pub fn link_target(&self) -> Option<String> {
+        if let Some(info) = self.link_info().as_ref() {
+            let base_path = if info.link_info_flags().has_common_network_relative_link_and_path_suffix() {
+                info.common_network_relative_link().as_ref().expect("missing common network relative link").name()
+            } else {
+                info.local_base_path_unicode()
+                    .as_ref()
+                    .map(|s| &s[..])
+                    .or(info.local_base_path())
+                    .expect("missing local base path").to_string()
+            };
+
+            let separator = if base_path.ends_with('\\') {
+                ""
+            } else {
+                "\\"
+            };
+
+            let common_path = info.common_path_suffix_unicode()
+                .as_ref()
+                .map(|s| &s[..])
+                .unwrap_or(info.common_path_suffix());
+
+            Some(format!("{base_path}{separator}{common_path}"))
+        } else {
+            None
+        }
+    }
+
     #[cfg(feature = "experimental_save")]
     /// Set the shell link's name
     pub fn set_name(&mut self, name: Option<String>) {
