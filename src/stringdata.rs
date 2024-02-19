@@ -1,9 +1,12 @@
+use std::fmt::Display;
+
 use crate::{strings::{SizedString, StringEncoding}, LinkFlags};
 use binread::BinRead;
 use encoding_rs::Encoding;
 use getset::Getters;
+use serde::Serialize;
 
-#[derive(BinRead, Getters)]
+#[derive(BinRead, Default, Getters, Debug, Serialize)]
 #[getset(get="pub")]
 #[br(import(link_flags: LinkFlags, default_codepage: &'static Encoding))]
 pub struct StringData {
@@ -57,6 +60,30 @@ pub struct StringData {
         map=|s: Option<SizedString>|s.map(|t| t.to_string())
     )]
     icon_location: Option<String>,
+}
+
+impl Display for StringData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut parts = Vec::new();
+
+        if let Some(name_string) = self.name_string().as_ref() {
+            parts.push(format!("name-string={name_string}"));
+        }
+        if let Some(relative_path) = self.relative_path().as_ref() {
+            parts.push(format!("relative-path={relative_path}"));
+        }
+        if let Some(working_dir) = self.working_dir().as_ref() {
+            parts.push(format!("working-dir={working_dir}"));
+        }
+        if let Some(command_line_arguments) = self.name_string().as_ref() {
+            parts.push(format!("cli-args={command_line_arguments}"));
+        }
+        if let Some(icon_location) = self.icon_location().as_ref() {
+            parts.push(format!("icon-location={icon_location}"));
+        }
+
+        parts.join(",").fmt(f)
+    }
 }
 
 #[cfg(feature = "experimental_save")]

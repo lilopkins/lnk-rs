@@ -68,9 +68,9 @@ fn test_lnk_header() {
         HotkeyModifiers::NO_MODIFIER
     );
 
-    assert_eq!(shortcut.name(), &None);
-    assert_eq!(shortcut.relative_path(), &Some(r".\a.txt".to_string()));
-    assert_eq!(shortcut.working_dir(), &Some(r"C:\test".to_string()));
+    assert_eq!(shortcut.string_data().name_string(), &None);
+    assert_eq!(shortcut.string_data().relative_path(), &Some(r".\a.txt".to_string()));
+    assert_eq!(shortcut.string_data().working_dir(), &Some(r"C:\test".to_string()));
 }
 
 #[test]

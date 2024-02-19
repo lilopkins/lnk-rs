@@ -34,6 +34,7 @@
 
 use binread::BinReaderExt;
 use encoding_rs::Encoding;
+use getset::Getters;
 #[cfg(feature="serde")]
 use serde::Serialize;
 use thiserror::Error;
@@ -112,18 +113,24 @@ pub enum Error {
 }
 
 /// A shell link
-#[derive(Debug)]
+#[derive(Debug, Getters)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
+#[getset(get="pub")]
 pub struct ShellLink {
-    shell_link_header: header::ShellLinkHeader,
+    /// returns the [`ShellLinkHeader`] structure
+    header: header::ShellLinkHeader,
+
+    /// returns the [`LinkTargetIdList`] structure
     #[cfg_attr(feature = "serde", serde(skip))]
     linktarget_id_list: Option<linktarget::LinkTargetIdList>,
+
+    /// returns the [`LinkInfo`] structure
     link_info: Option<linkinfo::LinkInfo>,
-    name_string: Option<String>,
-    relative_path: Option<String>,
-    working_dir: Option<String>,
-    command_line_arguments: Option<String>,
-    icon_location: Option<String>,
+    
+    /// returns the [`StringData`] structure
+    string_data: StringData,
+
+    /// returns the [`ExtraData`] structure
     #[allow(unused)]
     extra_data: extradata::ExtraData,
 }
@@ -134,14 +141,10 @@ impl Default for ShellLink {
     /// suggest you look at the [`ShellLink::new_simple`] method.
     fn default() -> Self {
         Self {
-            shell_link_header: header::ShellLinkHeader::default(),
+            header: header::ShellLinkHeader::default(),
             linktarget_id_list: None,
             link_info: None,
-            name_string: None,
-            relative_path: None,
-            working_dir: None,
-            command_line_arguments: None,
-            icon_location: None,
+            string_data: Default::default(),
             extra_data: Default::default(),
         }
     }
@@ -313,42 +316,18 @@ impl ShellLink {
         let extra_data: ExtraData = reader.read_le_args((default_codepage,))?;
 
         Ok(Self {
-            shell_link_header,
+            header: shell_link_header,
             linktarget_id_list,
             link_info,
-            name_string: string_data.name_string().clone(),
-            relative_path: string_data.relative_path().clone(),
-            working_dir: string_data.working_dir().clone(),
-            command_line_arguments: string_data.command_line_arguments().clone(),
-            icon_location: string_data.icon_location().clone(),
+            string_data,
             extra_data,
         })
-    }
-
-    /// Get the header of the shell link
-    pub fn header(&self) -> &ShellLinkHeader {
-        &self.shell_link_header
     }
 
     #[cfg(feature = "experimental_save")]
     /// Get a mutable instance of the shell link's header
     pub fn header_mut(&mut self) -> &mut ShellLinkHeader {
         &mut self.shell_link_header
-    }
-
-    /// Get the link target ID List
-    pub fn link_target_id_list(&self) -> &Option<LinkTargetIdList> {
-        &self.linktarget_id_list
-    }
-
-    /// Get the link info structure
-    pub fn link_info(&self) -> &Option<LinkInfo> {
-        &self.link_info
-    }
-
-    /// Get the shell link's name, if set
-    pub fn name(&self) -> &Option<String> {
-        &self.name_string
     }
 
     /// returns the full path of the link target. This information
@@ -392,22 +371,12 @@ impl ShellLink {
         self.name_string = name;
     }
 
-    /// Get the shell link's relative path, if set
-    pub fn relative_path(&self) -> &Option<String> {
-        &self.relative_path
-    }
-
     #[cfg(feature = "experimental_save")]
     /// Set the shell link's relative path
     pub fn set_relative_path(&mut self, relative_path: Option<String>) {
         self.header_mut()
             .update_link_flags(LinkFlags::HAS_RELATIVE_PATH, relative_path.is_some());
         self.relative_path = relative_path;
-    }
-
-    /// Get the shell link's working directory, if set
-    pub fn working_dir(&self) -> &Option<String> {
-        &self.working_dir
     }
 
     #[cfg(feature = "experimental_save")]
@@ -418,22 +387,12 @@ impl ShellLink {
         self.working_dir = working_dir;
     }
 
-    /// Get the shell link's arguments, if set
-    pub fn arguments(&self) -> &Option<String> {
-        &self.command_line_arguments
-    }
-
     #[cfg(feature = "experimental_save")]
     /// Set the shell link's arguments
     pub fn set_arguments(&mut self, arguments: Option<String>) {
         self.header_mut()
             .update_link_flags(LinkFlags::HAS_ARGUMENTS, arguments.is_some());
         self.command_line_arguments = arguments;
-    }
-
-    /// Get the shell link's icon location, if set
-    pub fn icon_location(&self) -> &Option<String> {
-        &self.icon_location
     }
 
     #[cfg(feature = "experimental_save")]
