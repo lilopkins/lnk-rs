@@ -1,0 +1,22 @@
+[package]
+name = "lnk-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+binread = "2"
+
+[dependencies.lnk]
+path = ".."
+
+[[bin]]
+name = "shell_link_header"
+path = "fuzz_targets/shell_link_header.rs"
+test = false
+doc = false
+bench = false

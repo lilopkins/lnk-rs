@@ -1,6 +1,10 @@
-use byteorder::{ByteOrder, LE};
+use binread::{BinRead, BinReaderExt};
+use encoding_rs::Encoding;
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
+
+#[cfg(feature="serde")]
+use serde::Serialize;
 
 use self::{
     console_data::ConsoleDataBlock, console_fe_data::ConsoleFEDataBlock,
@@ -9,6 +13,7 @@ use self::{
     property_store_data::PropertyStoreDataBlock, shim_data::ShimDataBlock,
     special_folder_data::SpecialFolderDataBlock, tracker_data::TrackerDataBlock,
     vista_and_above_id_list_data::VistaAndAboveIdListDataBlock,
+    shell_item_identifiers::ShellItemIdentifiers,
 };
 
 /// The ConsoleDataBlock structure specifies the display settings to use
@@ -73,43 +78,66 @@ pub mod vista_and_above_id_list_data;
 /// about a link target. These optional structures can be present in an extra
 /// data section that is appended to the basic Shell Link Binary File Format.
 ///
-/// At the moment, ExtraData can only be read, not written to shortcuts.
+/// At the moment, ExtraData can only be read, not written to shortcuts
+
+mod shell_item_identifiers;
+
 #[allow(missing_docs)]
-#[derive(Clone, Debug)]
-pub enum ExtraData {
-    ConsoleProps(ConsoleDataBlock),
-    ConsoleFeProps(ConsoleFEDataBlock),
-    DarwinProps(DarwinDataBlock),
-    EnvironmentProps(EnvironmentVariableDataBlock),
-    IconEnvironmentProps(IconEnvironmentDataBlock),
-    KnownFolderProps(KnownFolderDataBlock),
-    PropertyStoreProps(PropertyStoreDataBlock),
-    ShimProps(ShimDataBlock),
-    SpecialFolderProps(SpecialFolderDataBlock),
-    TrackerProps(TrackerDataBlock),
-    VistaAndAboveIdListProps(VistaAndAboveIdListDataBlock),
+#[derive(Clone, Debug, BinRead)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[br(import(_block_size: u32, _default_codepage: &'static Encoding))]
+pub enum ExtraDataBlock {
+    #[br(magic = 0xa0000001u32)]
+    EnvironmentProps(#[br(args(_block_size,_default_codepage))] EnvironmentVariableDataBlock),
+    #[br(magic = 0xa0000002u32)]
+    ConsoleProps(#[br(args(_block_size))] ConsoleDataBlock),
+    #[br(magic = 0xa0000003u32)]
+    TrackerProps(#[br(args(_block_size,_default_codepage))] TrackerDataBlock),
+    #[br(magic = 0xa0000004u32)]
+    ConsoleFeProps(#[br(args(_block_size))] ConsoleFEDataBlock),
+    #[br(magic = 0xa0000005u32)]
+    SpecialFolderProps(#[br(args(_block_size))] SpecialFolderDataBlock),
+    #[br(magic = 0xa0000006u32)]
+    DarwinProps(#[br(args(_block_size,_default_codepage))] DarwinDataBlock),
+    #[br(magic = 0xa0000007u32)]
+    IconEnvironmentProps(#[br(args(_block_size,_default_codepage))] IconEnvironmentDataBlock),
+    #[br(magic = 0xa0000008u32)]
+    ShimProps(#[br(args(_block_size))] ShimDataBlock),
+    #[br(magic = 0xa0000009u32)]
+    PropertyStoreProps(#[br(args(_block_size))] PropertyStoreDataBlock),
+    #[br(magic = 0xa000000au32)]
+    VistaAndAboveIdListProps(#[br(args(_block_size))] VistaAndAboveIdListDataBlock),
+    #[br(magic = 0xa000000bu32)]
+    KnownFolderProps(#[br(args(_block_size))] KnownFolderDataBlock),
+    #[br(magic = 0xa000000cu32)]
+    ShellItemIdentifiers(#[br(args(_block_size))] ShellItemIdentifiers),
 }
 
-impl From<&[u8]> for ExtraData {
-    fn from(data: &[u8]) -> Self {
-        let size = LE::read_u32(data) as usize;
-        let sig = LE::read_u32(&data[4..]);
-        debug!("Signature {:x}", sig);
-        let data = &data[8..size];
+#[derive(Default, Debug)]
+#[allow(missing_docs, unused)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+pub struct ExtraData {
+    blocks: Vec<ExtraDataBlock>,
+}
 
-        match sig {
-            0xa0000002 => Self::ConsoleProps(ConsoleDataBlock::from(data)),
-            0xa0000004 => Self::ConsoleFeProps(ConsoleFEDataBlock::from(data)),
-            0xa0000006 => Self::DarwinProps(DarwinDataBlock::from(data)),
-            0xa0000001 => Self::EnvironmentProps(EnvironmentVariableDataBlock::from(data)),
-            0xa0000007 => Self::IconEnvironmentProps(IconEnvironmentDataBlock::from(data)),
-            0xa000000b => Self::KnownFolderProps(KnownFolderDataBlock::from(data)),
-            0xa0000009 => Self::PropertyStoreProps(PropertyStoreDataBlock::from(data)),
-            0xa0000008 => Self::ShimProps(ShimDataBlock::from(data)),
-            0xa0000005 => Self::SpecialFolderProps(SpecialFolderDataBlock::from(data)),
-            0xa0000003 => Self::TrackerProps(TrackerDataBlock::from(data)),
-            0xa000000a => Self::VistaAndAboveIdListProps(VistaAndAboveIdListDataBlock::from(data)),
-            _ => panic!("Invalid extra data type!"),
+impl BinRead for ExtraData {
+    type Args = (&'static Encoding,);
+
+    fn read_options<R: std::io::prelude::Read + std::io::prelude::Seek>(
+        reader: &mut R,
+        _options: &binread::ReadOptions,
+        args: Self::Args,
+    ) -> binread::prelude::BinResult<Self> {
+        let mut blocks = Vec::new();
+        loop {
+            let block_size: u32 = reader.read_le()?;
+            if block_size == 0 {
+                break;
+            } else {
+                let block: ExtraDataBlock = reader.read_le_args((block_size,args.0))?;
+                blocks.push(block);
+            }
         }
+        Ok(Self { blocks })
     }
 }

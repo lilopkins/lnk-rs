@@ -1,148 +1,98 @@
+#![allow(missing_docs)]
+use std::mem::size_of;
+
+use binread::{derive_binread, BinRead};
 use bitflags::bitflags;
 use byteorder::{ByteOrder, LE};
+use getset::{Getters, MutGetters, Setters};
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 
-use std::convert::TryFrom;
+#[cfg(feature="serde")]
+use serde::Serialize;
+
+use  crate::binread_flags::*;
 
 use crate::FileTime;
+use crate::Guid;
 
-const CLSID: u128 = 0x460000000000_00c0_0000_0000_00021401;
+#[allow(clippy::unusual_byte_groupings)]
 
 /// A ShellLinkHeader structure (section 2.1), which contains identification
 /// information, timestamps, and flags that specify the presence of optional
 /// structures.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug, Getters, MutGetters, Setters)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[derive_binread]
+#[br(little)]
+#[getset(get="pub", get_mut="pub", set="pub")]
 pub struct ShellLinkHeader {
+    /// The size, in bytes, of this structure. This value MUST be 0x0000004C.
+    #[br(assert(header_size == 0x0000_004c))]
+    header_size: u32,
+
+    /// This value MUST be 00021401-0000-0000-C000-000000000046.
+    #[br(assert(link_clsid == Guid::from(uuid::uuid!("00021401-0000-0000-C000-000000000046"))))]
+    link_clsid: Guid,
     /// A LinkFlags structure (section 2.1.1) that specifies information about the shell link and
     /// the presence of optional portions of the structure.
     link_flags: LinkFlags,
+    
     /// A FileAttributesFlags structure (section 2.1.2) that specifies information about the link
     /// target.
     file_attributes: FileAttributeFlags,
+    
     /// A FILETIME structure ([MS-DTYP]section 2.3.3) that specifies the creation time of the link
     /// target in UTC (Coordinated Universal Time). If the value is zero, there is no creation time
     /// set on the link target.
     creation_time: FileTime,
+    
     /// A FILETIME structure ([MS-DTYP] section2.3.3) that specifies the access time of the link
     /// target in UTC (Coordinated Universal Time). If the value is zero, there is no access time
     /// set on the link target.
     access_time: FileTime,
+    
     /// A FILETIME structure ([MS-DTYP] section 2.3.3) that specifies the write time of the link
     /// target in UTC (Coordinated Universal Time). If the value is zero, there is no write time
     /// set on the link target.
     write_time: FileTime,
+    
     /// A 32-bit unsigned integer that specifies the size, in bytes, of the link target. If the
     /// link target fileis larger than 0xFFFFFFFF, this value specifies the least significant 32
     /// bits of the link target file size.
     file_size: u32,
+    
     /// A 32-bit signed integer that specifies the index of an icon within a given icon location.
     icon_index: i32,
+    
     /// A 32-bit unsigned integer that specifies the expected window state of an application
     /// launched by the link.
     show_command: ShowCommand,
+    
     /// A HotkeyFlags structure (section 2.1.3) that specifies the keystrokes used to launch the
     /// application referenced by the shortcut key. This value is assigned to the application after
     /// it is launched, so that pressing the key activates that application.
     hotkey: HotkeyFlags,
+
+    /// A value that MUST be zero
+    #[br(assert(reserved1 == 0))]
+    #[cfg_attr(feature = "serde", serde(skip))]
+    reserved1: u16,
+
+    /// A value that MUST be zero
+    #[br(assert(reserved2 == 0))]
+    #[cfg_attr(feature = "serde", serde(skip))]
+    reserved2: u32,
+    
+    /// A value that MUST be zero
+    #[br(assert(reserved3 == 0))]
+    #[cfg_attr(feature = "serde", serde(skip))]
+    reserved3: u32,
 }
 
 impl ShellLinkHeader {
-    /// Get the link flags
-    pub fn link_flags(&self) -> &LinkFlags {
-        &self.link_flags
-    }
-
-    /// Set the link flags
-    pub fn set_link_flags(&mut self, link_flags: LinkFlags) {
-        self.link_flags = link_flags;
-    }
-
     /// Set some link flags
     pub fn update_link_flags(&mut self, link_flags: LinkFlags, value: bool) {
         self.link_flags.set(link_flags, value);
-    }
-
-    /// Get the file attributes
-    pub fn file_attributes(&self) -> &FileAttributeFlags {
-        &self.file_attributes
-    }
-
-    /// Set the file attributes
-    pub fn set_file_attributes(&mut self, file_attributes: FileAttributeFlags) {
-        self.file_attributes = file_attributes;
-    }
-
-    /// Get the file creation time
-    pub fn creation_time(&self) -> FileTime {
-        self.creation_time
-    }
-
-    /// Set the file creation time
-    pub fn set_creation_time(&mut self, creation_time: FileTime) {
-        self.creation_time = creation_time;
-    }
-
-    /// Get the file access time
-    pub fn access_time(&self) -> FileTime {
-        self.access_time
-    }
-
-    /// Set the file access time
-    pub fn set_access_time(&mut self, access_time: FileTime) {
-        self.access_time = access_time;
-    }
-
-    /// Get the file write time
-    pub fn write_time(&self) -> FileTime {
-        self.write_time
-    }
-
-    /// Set the file write time
-    pub fn set_write_time(&mut self, write_time: FileTime) {
-        self.write_time = write_time;
-    }
-
-    /// The file size, or at least the least significant 32-bits of the
-    /// size
-    pub fn file_size(&self) -> u32 {
-        self.file_size
-    }
-
-    /// Set the file size, or if bigger then 32-bits, set the least
-    /// significant 32-bits
-    pub fn set_file_size(&mut self, file_size: u32) {
-        self.file_size = file_size;
-    }
-
-    /// Get the icon index
-    pub fn icon_index(&self) -> i32 {
-        self.icon_index
-    }
-
-    /// Set the icon index
-    pub fn set_icon_index(&mut self, icon_index: i32) {
-        self.icon_index = icon_index;
-    }
-
-    /// Get the show command
-    pub fn show_command(&self) -> &ShowCommand {
-        &self.show_command
-    }
-
-    /// Set the shortcut show command
-    pub fn set_show_command(&mut self, show_command: ShowCommand) {
-        self.show_command = show_command;
-    }
-
-    /// Get the hotkey flags
-    pub fn hotkey(&self) -> &HotkeyFlags {
-        &self.hotkey
-    }
-
-    /// Get a mutable pointer to the hotkey flags
-    pub fn hotkey_mut(&mut self) -> &mut HotkeyFlags {
-        &mut self.hotkey
     }
 }
 
@@ -150,34 +100,39 @@ impl Default for ShellLinkHeader {
     /// Create a new, blank, ShellLinkHeader
     fn default() -> Self {
         Self {
+            header_size: size_of::<Self>() as u32,
+            link_clsid: Guid::from(uuid::uuid!("00021401-0000-0000-C000-000000000046")),
             link_flags: LinkFlags::IS_UNICODE,
             file_attributes: FileAttributeFlags::FILE_ATTRIBUTE_NORMAL,
-            creation_time: FileTime::now(),
-            access_time: FileTime::now(),
-            write_time: FileTime::now(),
+            creation_time: FileTime::default(),
+            access_time: FileTime::default(),
+            write_time: FileTime::default(),
             file_size: 0,
             icon_index: 0,
             show_command: ShowCommand::ShowNormal,
             hotkey: HotkeyFlags::new(HotkeyKey::NoKeyAssigned, HotkeyModifiers::NO_MODIFIER),
+            reserved1: 0,
+            reserved2: 0,
+            reserved3: 0
         }
     }
 }
 
-impl Into<[u8; 0x4c]> for ShellLinkHeader {
+impl From<ShellLinkHeader> for [u8; 0x4c] {
     /// Write the data in this header to a `[u8]` for writing to the output file.
-    fn into(self) -> [u8; 0x4c] {
+    fn from(val: ShellLinkHeader) -> Self {
         let mut header_data = [0u8; 0x4c];
         LE::write_u32(&mut header_data[0..], 0x4c);
-        LE::write_u128(&mut header_data[4..], CLSID);
-        LE::write_u32(&mut header_data[20..], self.link_flags.bits);
-        LE::write_u32(&mut header_data[24..], self.file_attributes.bits);
-        LE::write_u64(&mut header_data[28..], self.creation_time.into());
-        LE::write_u64(&mut header_data[36..], self.access_time.into());
-        LE::write_u64(&mut header_data[44..], self.write_time.into());
-        LE::write_u32(&mut header_data[52..], self.file_size);
-        LE::write_i32(&mut header_data[56..], self.icon_index);
-        LE::write_u32(&mut header_data[60..], self.show_command as u32);
-        LE::write_u16(&mut header_data[64..], self.hotkey.to_flags_u16());
+        LE::write_u128(&mut header_data[4..], uuid::uuid!("00021401-0000-0000-C000-000000000046").to_u128_le());
+        LE::write_u32(&mut header_data[20..], val.link_flags.bits());
+        LE::write_u32(&mut header_data[24..], val.file_attributes.bits());
+        LE::write_u64(&mut header_data[28..], val.creation_time.into());
+        LE::write_u64(&mut header_data[36..], val.access_time.into());
+        LE::write_u64(&mut header_data[44..], val.write_time.into());
+        LE::write_u32(&mut header_data[52..], val.file_size);
+        LE::write_i32(&mut header_data[56..], val.icon_index);
+        LE::write_u32(&mut header_data[60..], val.show_command as u32);
+        LE::write_u16(&mut header_data[64..], val.hotkey.to_flags_u16());
         LE::write_u16(&mut header_data[66..], 0);
         LE::write_u32(&mut header_data[68..], 0);
         LE::write_u32(&mut header_data[72..], 0);
@@ -185,37 +140,11 @@ impl Into<[u8; 0x4c]> for ShellLinkHeader {
     }
 }
 
-impl TryFrom<&[u8]> for ShellLinkHeader {
-    type Error = crate::Error;
-
-    /// Read data into this struct from a `[u8]`.
-    /// Returns an error when the magic number is not valid.
-    fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
-        let mut header = Self::default();
-
-        if LE::read_u32(&data[0..]) != 0x4c {
-            return Err(crate::Error::NotAShellLinkError);
-        }
-        if LE::read_u128(&data[4..]) != CLSID {
-            return Err(crate::Error::NotAShellLinkError);
-        }
-        header.link_flags = LinkFlags::from_bits_truncate(LE::read_u32(&data[20..]));
-        header.file_attributes = FileAttributeFlags::from_bits_truncate(LE::read_u32(&data[24..]));
-        header.creation_time = FileTime::from(LE::read_u64(&data[28..]));
-        header.access_time = FileTime::from(LE::read_u64(&data[36..]));
-        header.write_time = FileTime::from(LE::read_u64(&data[44..]));
-        header.file_size = LE::read_u32(&data[52..]);
-        header.icon_index = LE::read_i32(&data[56..]);
-        header.show_command = FromPrimitive::from_u32(LE::read_u32(&data[60..])).unwrap();
-        header.hotkey = HotkeyFlags::from_bits(LE::read_u16(&data[64..]));
-
-        Ok(header)
-    }
-}
-
 bitflags! {
     /// The LinkFlags structure defines bits that specify which shell linkstructures are present in
     /// the file format after the ShellLinkHeaderstructure (section 2.1).
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
     pub struct LinkFlags: u32 {
         /// The shell link is saved with an item ID list (IDList). If this bit is set, a
         /// LinkTargetIDList structure (section 2.2) MUST follow the ShellLinkHeader. If this bit
@@ -303,11 +232,15 @@ bitflags! {
     }
 }
 
+binread_flags!(LinkFlags, u32);
+
 bitflags! {
     /// The FileAttributesFlags structure defines bits that specify the file attributes of the link
     /// target, if the target is a file system item. File attributes can be used if the link target
     /// is not available, or if accessing the target would be inefficient. It is possible for the
     /// target items attributes to be out of sync with this value.
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
     pub struct FileAttributeFlags: u32 {
         /// The file or directory is read-only. For a file, if this bit is set, applications can read the file but cannot write to it or delete it. For a directory, if this bit is set, applications cannot delete the directory
         const FILE_ATTRIBUTE_READONLY               = 0b0000_0000_0000_0000_0000_0000_0000_0001;
@@ -346,9 +279,13 @@ bitflags! {
     }
 }
 
+
+binread_flags!(FileAttributeFlags, u32);
+
 /// The HotkeyFlags structure specifies input generated by a combination of keyboard keys being
 /// pressed.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, BinRead)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 pub struct HotkeyFlags {
     low_byte: HotkeyKey,
     high_byte: HotkeyModifiers,
@@ -365,15 +302,7 @@ impl HotkeyFlags {
 
     /// Convert these HotkeyFlags to the u16 representation for saving.
     fn to_flags_u16(self) -> u16 {
-        self.low_byte as u16 + ((self.high_byte.bits as u16) << 8)
-    }
-
-    /// Convert a u16 representation back into a set of HotkeyFlags.
-    fn from_bits(bits: u16) -> Self {
-        Self {
-            low_byte: FromPrimitive::from_u16(bits & 0b1111_1111).unwrap(),
-            high_byte: HotkeyModifiers::from_bits_truncate((bits >> 8) as u8),
-        }
+        self.low_byte as u16 + ((self.high_byte.bits() as u16) << 8)
     }
 
     /// The primary key assigned to the hotkey
@@ -398,9 +327,11 @@ impl HotkeyFlags {
 }
 
 #[allow(missing_docs)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, FromPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, FromPrimitive, BinRead)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
 /// An 8-bit unsigned integer that specifies a virtual key code that corresponds to a key on the
 /// keyboard.
+#[br(repr=u8)]
 pub enum HotkeyKey {
     NoKeyAssigned = 0x00,
     Key0 = 0x30,
@@ -469,7 +400,10 @@ pub enum HotkeyKey {
 
 bitflags! {
     /// An 8-bit unsigned integer that specifies bits that correspond to modifier keys on the
-    /// keyboard.
+    /// keyboard
+    /// 
+    #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+    #[cfg_attr(feature = "serde", derive(Serialize))]
     pub struct HotkeyModifiers: u8 {
         /// No modifier key is being used.
         const NO_MODIFIER       = 0x00;
@@ -482,8 +416,13 @@ bitflags! {
     }
 }
 
+
+binread_flags!(HotkeyModifiers, u8);
+
 /// The expected window state of an application launched by the link.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, FromPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, FromPrimitive, BinRead)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[br(repr=u32)]
 pub enum ShowCommand {
     /// The application is open and its window is open in a normal fashion.
     ShowNormal = 0x01,

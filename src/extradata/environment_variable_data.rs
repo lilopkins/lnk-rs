@@ -1,46 +1,27 @@
-use crate::strings;
+use binread::BinRead;
+use encoding_rs::{Encoding, UTF_16LE};
+use getset::Getters;
+
+#[cfg(feature = "serde")]
+use serde::Serialize;
+
+use crate::strings::FixedSizeString;
 
 /// The EnvironmentVariableDataBlock structure specifies a path to
 /// environment variable information when the link target refers to
 /// a location that has a corresponding environment variable.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, BinRead, Getters)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[br(import(block_size: u32, default_codepage: &'static Encoding), pre_assert(block_size == 0x0000_0314))]
+#[get(get = "pub")]
+#[allow(unused)]
 pub struct EnvironmentVariableDataBlock {
     /// A NULL-terminated string, defined by the system default code
     /// page, which specifies a path to environment variable information.
+    #[br(args(260, default_codepage), map=|s:FixedSizeString| s.to_string())]
     target_ansi: String,
     /// An optional, NULL-terminated, Unicode string that specifies a path
     /// to environment variable information.
+    #[br(args(520, UTF_16LE), map=|s: FixedSizeString| if s.is_empty() {None} else {Some(s.to_string())})]
     target_unicode: Option<String>,
-}
-
-impl EnvironmentVariableDataBlock {
-    /// A NULL-terminated string, defined by the system default code
-    /// page, which specifies a path to environment variable information.
-    pub fn target_ansi(&self) -> &String {
-        &self.target_ansi
-    }
-
-    /// An optional, NULL-terminated, Unicode string that specifies a path
-    /// to environment variable information.
-    pub fn target_unicode(&self) -> &Option<String> {
-        &self.target_unicode
-    }
-}
-
-impl From<&[u8]> for EnvironmentVariableDataBlock {
-    fn from(data: &[u8]) -> Self {
-        let target_ansi =
-            strings::trim_nul_terminated_string(String::from_utf8_lossy(&data[0..260]));
-        let target_unicode_raw =
-            strings::trim_nul_terminated_string(String::from_utf8_lossy(&data[260..520]));
-        let target_unicode = if target_unicode_raw.len() == 0 {
-            None
-        } else {
-            Some(target_unicode_raw)
-        };
-        Self {
-            target_ansi,
-            target_unicode,
-        }
-    }
 }

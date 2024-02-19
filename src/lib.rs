@@ -15,8 +15,9 @@
 //! A simple example appears as follows:
 //! ```
 //! use lnk::ShellLink;
+//! use encoding_rs::WINDOWS_1252;
 //! // ...
-//! let shortcut = lnk::ShellLink::open("tests/test.lnk").unwrap();
+//! let shortcut = lnk::ShellLink::open("tests/test.lnk", WINDOWS_1252).unwrap();
 //! println!("{:#?}", shortcut);
 //! ```
 //!
@@ -31,15 +32,19 @@
 //!
 //! > **IMPORTANT!**: Writing capability is currently in a very early stage and probably won't work!
 
-use byteorder::{ByteOrder, LE};
+use binread::BinReaderExt;
+use encoding_rs::Encoding;
+use getset::Getters;
+#[cfg(feature="serde")]
+use serde::Serialize;
+use thiserror::Error;
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
-use std::convert::TryFrom;
-use std::fs::File;
+use std::{fs::File, io::Seek};
 #[cfg(feature = "experimental_save")]
 use std::io::BufWriter;
-use std::io::{prelude::*, BufReader};
+use std::io::BufReader;
 #[cfg(feature = "experimental_save")]
 use std::path::Path;
 
@@ -73,35 +78,61 @@ pub use extradata::ExtraData;
 mod filetime;
 pub use filetime::FileTime;
 
+mod current_offset;
+pub use current_offset::*;
+
+use crate::stringdata::StringData;
+
+mod guid;
+pub use guid::*;
+
 mod strings;
+pub use strings::*;
+
+mod idlist;
+pub use idlist::*;
+
+mod itemid;
+pub use itemid::*;
+
+#[macro_use]
+mod binread_flags;
 
 /// The error type for shell link parsing errors.
-#[derive(Debug)]
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
 pub enum Error {
-    /// An IO error occurred.
-    IoError(std::io::Error),
-    /// The parsed file isn't a shell link.
-    NotAShellLinkError,
-}
+    #[error("An IO error occurred: {0}")]
+    IoError(#[from] std::io::Error),
 
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
-        Error::IoError(e)
-    }
+    #[error("The parsed file isn't a shell link.")]
+    NotAShellLinkError,
+
+    #[error("Error while parsing: {0}")]
+    BinReadError(#[from] binread::Error)
 }
 
 /// A shell link
-#[derive(Clone, Debug)]
+#[derive(Debug, Getters)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+#[getset(get="pub")]
 pub struct ShellLink {
-    shell_link_header: header::ShellLinkHeader,
+    /// returns the [`ShellLinkHeader`] structure
+    header: header::ShellLinkHeader,
+
+    /// returns the [`LinkTargetIdList`] structure
+    #[cfg_attr(feature = "serde", serde(skip))]
     linktarget_id_list: Option<linktarget::LinkTargetIdList>,
+
+    /// returns the [`LinkInfo`] structure
     link_info: Option<linkinfo::LinkInfo>,
-    name_string: Option<String>,
-    relative_path: Option<String>,
-    working_dir: Option<String>,
-    command_line_arguments: Option<String>,
-    icon_location: Option<String>,
-    _extra_data: Vec<extradata::ExtraData>,
+    
+    /// returns the [`StringData`] structure
+    string_data: StringData,
+
+    /// returns the [`ExtraData`] structure
+    #[allow(unused)]
+    extra_data: extradata::ExtraData,
 }
 
 impl Default for ShellLink {
@@ -110,15 +141,11 @@ impl Default for ShellLink {
     /// suggest you look at the [`ShellLink::new_simple`] method.
     fn default() -> Self {
         Self {
-            shell_link_header: header::ShellLinkHeader::default(),
+            header: header::ShellLinkHeader::default(),
             linktarget_id_list: None,
             link_info: None,
-            name_string: None,
-            relative_path: None,
-            working_dir: None,
-            command_line_arguments: None,
-            icon_location: None,
-            _extra_data: vec![],
+            string_data: Default::default(),
+            extra_data: Default::default(),
         }
     }
 }
@@ -254,124 +281,47 @@ impl ShellLink {
     }
 
     /// Open and parse a shell link
-    pub fn open<P: AsRef<std::path::Path>>(path: P) -> Result<Self, Error> {
+    pub fn open<P: AsRef<std::path::Path>>(path: P, default_codepage: &'static Encoding) -> Result<Self, Error> {
         debug!("Opening {:?}", path.as_ref());
-        let mut r = BufReader::new(File::open(path)?);
-        let mut data = vec![];
+        let mut reader = BufReader::new(File::open(path)?);
+        //let mut data = vec![];
         trace!("Reading file.");
-        r.read_to_end(&mut data)?;
-
-        trace!("Parsing shell header.");
-        if data.len() < 0x4c {
-            return Err(Error::NotAShellLinkError);
-        }
-        let shell_link_header = header::ShellLinkHeader::try_from(&data[0..0x4c])?;
+        //r.read_to_end(&mut data)?;
+        
+        //trace!("Parsing shell header.");
+        //if data.len() < 0x4c {
+        //    return Err(Error::NotAShellLinkError);
+        //}
+        let shell_link_header: ShellLinkHeader = reader.read_le()?;
         debug!("Shell header: {:#?}", shell_link_header);
-
-        let mut cursor = 0x4c;
 
         let mut linktarget_id_list = None;
         let link_flags = *shell_link_header.link_flags();
         if link_flags.contains(LinkFlags::HAS_LINK_TARGET_ID_LIST) {
-            debug!("A LinkTargetIDList is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let list = linktarget::LinkTargetIdList::from(&data[cursor..]);
+            debug!("A LinkTargetIDList is marked as present. Parsing now at position 0x{:0x}", reader.stream_position()?);
+            let list: LinkTargetIdList = reader.read_le()?;
             debug!("{:?}", list);
-            cursor += list.size as usize + 2; // add LinkTargetSize size
             linktarget_id_list = Some(list);
         }
 
         let mut link_info = None;
         if link_flags.contains(LinkFlags::HAS_LINK_INFO) {
-            debug!("LinkInfo is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let info = linkinfo::LinkInfo::from(&data[cursor..]);
+            debug!("LinkInfo is marked as present. Parsing now at position 0x{:0x}", reader.stream_position()?);
+            let info: LinkInfo = reader.read_le_args((default_codepage,))?;
             debug!("{:?}", info);
-            cursor += info.size as usize;
             link_info = Some(info);
         }
 
-        let mut name_string = None;
-        let mut relative_path = None;
-        let mut working_dir = None;
-        let mut command_line_arguments = None;
-        let mut icon_location = None;
-
-        if link_flags.contains(LinkFlags::HAS_NAME) {
-            debug!("Name is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let (len, data) = stringdata::parse_string(&data[cursor..], link_flags);
-            name_string = Some(data);
-            cursor += len; // add len bytes
-        }
-
-        if link_flags.contains(LinkFlags::HAS_RELATIVE_PATH) {
-            debug!("Relative path is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let (len, data) = stringdata::parse_string(&data[cursor..], link_flags);
-            relative_path = Some(data);
-            cursor += len; // add len bytes
-        }
-
-        if link_flags.contains(LinkFlags::HAS_WORKING_DIR) {
-            debug!("Working dir is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let (len, data) = stringdata::parse_string(&data[cursor..], link_flags);
-            working_dir = Some(data);
-            cursor += len; // add len bytes
-        }
-
-        if link_flags.contains(LinkFlags::HAS_ARGUMENTS) {
-            debug!("Arguments are marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let (len, data) = stringdata::parse_string(&data[cursor..], link_flags);
-            command_line_arguments = Some(data);
-            cursor += len; // add len bytes
-        }
-
-        if link_flags.contains(LinkFlags::HAS_ICON_LOCATION) {
-            debug!("Icon Location is marked as present. Parsing now.");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let (len, data) = stringdata::parse_string(&data[cursor..], link_flags);
-            icon_location = Some(data);
-            cursor += len; // add len bytes
-        }
-
-        let mut extra_data = Vec::new();
-
-        loop {
-            if data[cursor..].len() < 4 {
-                warn!("The ExtraData length is invalid.");
-                break; // Probably an error?
-            }
-            debug!("Parsing ExtraData");
-            debug!("Cursor position: 0x{:x}", cursor);
-            let query = LE::read_u32(&data[cursor..]);
-            if query < 0x04 {
-                break;
-            }
-            extra_data.push(extradata::ExtraData::from(&data[cursor..]));
-            cursor += query as usize;
-        }
-
-        let _remaining_data = &data[cursor..];
+        let string_data: StringData = reader.read_le_args((link_flags, default_codepage))?;
+        let extra_data: ExtraData = reader.read_le_args((default_codepage,))?;
 
         Ok(Self {
-            shell_link_header,
+            header: shell_link_header,
             linktarget_id_list,
             link_info,
-            name_string,
-            relative_path,
-            working_dir,
-            command_line_arguments,
-            icon_location,
-            _extra_data: extra_data,
+            string_data,
+            extra_data,
         })
-    }
-
-    /// Get the header of the shell link
-    pub fn header(&self) -> &ShellLinkHeader {
-        &self.shell_link_header
     }
 
     #[cfg(feature = "experimental_save")]
@@ -380,19 +330,37 @@ impl ShellLink {
         &mut self.shell_link_header
     }
 
-    /// Get the link target ID List
-    pub fn link_target_id_list(&self) -> &Option<LinkTargetIdList> {
-        &self.linktarget_id_list
-    }
+    /// returns the full path of the link target. This information
+    /// is constructed completely from the LINK_INFO structure. So,
+    /// if the lnk file does not contain such a structure, the result
+    /// of this method will be `None`
+    pub fn link_target(&self) -> Option<String> {
+        if let Some(info) = self.link_info().as_ref() {
+            let base_path = if info.link_info_flags().has_common_network_relative_link_and_path_suffix() {
+                info.common_network_relative_link().as_ref().expect("missing common network relative link").name()
+            } else {
+                info.local_base_path_unicode()
+                    .as_ref()
+                    .map(|s| &s[..])
+                    .or(info.local_base_path())
+                    .expect("missing local base path").to_string()
+            };
 
-    /// Get the link info structure
-    pub fn link_info(&self) -> &Option<LinkInfo> {
-        &self.link_info
-    }
+            let separator = if base_path.ends_with('\\') {
+                ""
+            } else {
+                "\\"
+            };
 
-    /// Get the shell link's name, if set
-    pub fn name(&self) -> &Option<String> {
-        &self.name_string
+            let common_path = info.common_path_suffix_unicode()
+                .as_ref()
+                .map(|s| &s[..])
+                .unwrap_or(info.common_path_suffix());
+
+            Some(format!("{base_path}{separator}{common_path}"))
+        } else {
+            None
+        }
     }
 
     #[cfg(feature = "experimental_save")]
@@ -403,22 +371,12 @@ impl ShellLink {
         self.name_string = name;
     }
 
-    /// Get the shell link's relative path, if set
-    pub fn relative_path(&self) -> &Option<String> {
-        &self.relative_path
-    }
-
     #[cfg(feature = "experimental_save")]
     /// Set the shell link's relative path
     pub fn set_relative_path(&mut self, relative_path: Option<String>) {
         self.header_mut()
             .update_link_flags(LinkFlags::HAS_RELATIVE_PATH, relative_path.is_some());
         self.relative_path = relative_path;
-    }
-
-    /// Get the shell link's working directory, if set
-    pub fn working_dir(&self) -> &Option<String> {
-        &self.working_dir
     }
 
     #[cfg(feature = "experimental_save")]
@@ -429,22 +387,12 @@ impl ShellLink {
         self.working_dir = working_dir;
     }
 
-    /// Get the shell link's arguments, if set
-    pub fn arguments(&self) -> &Option<String> {
-        &self.command_line_arguments
-    }
-
     #[cfg(feature = "experimental_save")]
     /// Set the shell link's arguments
     pub fn set_arguments(&mut self, arguments: Option<String>) {
         self.header_mut()
             .update_link_flags(LinkFlags::HAS_ARGUMENTS, arguments.is_some());
         self.command_line_arguments = arguments;
-    }
-
-    /// Get the shell link's icon location, if set
-    pub fn icon_location(&self) -> &Option<String> {
-        &self.icon_location
     }
 
     #[cfg(feature = "experimental_save")]
