@@ -371,7 +371,7 @@ impl HotkeyFlags {
     /// Convert a u16 representation back into a set of HotkeyFlags.
     fn from_bits(bits: u16) -> Self {
         Self {
-            low_byte: FromPrimitive::from_u16(bits & 0b1111_1111).unwrap(),
+            low_byte: FromPrimitive::from_u16(bits & 0b1111_1111).unwrap_or(HotkeyKey::NoKeyAssigned),
             high_byte: HotkeyModifiers::from_bits_truncate((bits >> 8) as u8),
         }
     }
