@@ -7,7 +7,8 @@ use log::debug;
 fn tes_failing_shortcut() {
     let _ = pretty_env_logger::try_init();
 
-    let shortcut = ShellLink::open("tests/data/iron-heart.exe - Shortcut.lnk", WINDOWS_1252).unwrap();
+    let shortcut =
+        ShellLink::open("tests/data/iron-heart.exe - Shortcut.lnk", WINDOWS_1252).unwrap();
     debug!("{:#?}", shortcut);
 }
 
@@ -15,6 +16,10 @@ fn tes_failing_shortcut() {
 fn test_non_latin_shortcut() {
     let _ = pretty_env_logger::try_init();
 
-    let shortcut = ShellLink::open("tests/data/iron-heart.exe - non-latin Shortcut.lnk", WINDOWS_1252).unwrap();
+    let shortcut = ShellLink::open(
+        "tests/data/iron-heart.exe - non-latin Shortcut.lnk",
+        WINDOWS_1252,
+    )
+    .unwrap();
     debug!("{:#?}", shortcut);
 }

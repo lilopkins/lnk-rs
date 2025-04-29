@@ -136,12 +136,12 @@ impl BinRead for ExtraData {
                     if why.kind() == ErrorKind::UnexpectedEof {
                         break;
                     } else {
-                        return Err(binrw::Error::Io(why))
+                        return Err(binrw::Error::Io(why));
                     }
-                },
-                Err(why) => return Err(why)
+                }
+                Err(why) => return Err(why),
             };
-            
+
             if block_size == 0 {
                 break;
             } else {

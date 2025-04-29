@@ -72,7 +72,9 @@ pub fn write_sized_string(
 ) -> BinResult<()> {
     if link_flags.contains(expected_flag) {
         assert!(s.is_some());
-        let s = s.as_ref().expect("the flags indicate that there should be a value, but there is none");
+        let s = s
+            .as_ref()
+            .expect("the flags indicate that there should be a value, but there is none");
         let count_characters = u16::try_from(s.len()).map_err(|_| binrw::Error::Custom {
             pos: writer.stream_position().unwrap(),
             err: Box::new("String is too long to be written"),

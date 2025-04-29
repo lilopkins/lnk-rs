@@ -57,7 +57,7 @@ pub struct LinkInfo {
     #[br(
         assert(
             if link_info_flags.has_volume_id_and_local_base_path() {
-                volume_id_offset >= link_info_header_size && 
+                volume_id_offset >= link_info_header_size &&
                 volume_id_offset < link_info_size
             } else {
                 true // we handle the other case as non-fatal error
