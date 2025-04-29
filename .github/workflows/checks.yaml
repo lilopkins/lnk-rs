@@ -1,0 +1,35 @@
+name: Rust Checks
+
+on:
+  pull_request:
+
+jobs:
+  check:
+    name: Check ${{ matrix.checks.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        checks:
+          - name: Code
+            command: check --locked
+          - name: Formatting
+            component: rustfmt
+            command: fmt --check
+          - name: Tests
+            command: test
+          - name: Clippy Suggestions
+            component: clippy
+            command: clippy --all-features
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install latest Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: ${{ matrix.checks.component }}
+
+      - name: Checking ${{ matrix.checks.name }}
+        run: cargo ${{ matrix.checks.command }}
