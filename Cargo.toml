@@ -2,7 +2,7 @@
 name = "lnk"
 version = "0.6.0"
 authors = [
-    "Lily Hopkins <bsalarius@gmail.com>",
+    "Lily Hopkins <lily@hpkns.uk>",
     "Simon Buchan <simon.buchan.nz@gmail.com>",
 ]
 edition = "2021"
