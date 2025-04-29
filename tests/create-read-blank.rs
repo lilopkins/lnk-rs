@@ -1,3 +1,4 @@
+use lnk::{encoding::WINDOWS_1252, StringEncoding};
 use log::info;
 
 use std::fs;
@@ -8,21 +9,25 @@ const TEST_FILE_NAME: &'static str = "temp.lnk";
 fn create_read_blank() {
     pretty_env_logger::init();
 
-    for is_unicode in &[false, true] {
+    for encoding in &[
+        StringEncoding::Unicode,
+        StringEncoding::CodePage(WINDOWS_1252),
+    ] {
         info!("Saving shortcut...");
-        let mut shortcut = lnk::ShellLink::default();
-        shortcut
-            .header_mut()
-            .update_link_flags(lnk::LinkFlags::IS_UNICODE, *is_unicode);
+        let mut shortcut = lnk::ShellLink::default().with_encoding(encoding);
         shortcut.set_name(Some("Blank name".to_string()));
         shortcut
             .save(TEST_FILE_NAME)
             .expect("Failed to save shortcut!");
 
         info!("Reading shortcut...");
-        let shortcut = lnk::ShellLink::open(TEST_FILE_NAME).unwrap();
-        println!("{:#?}", shortcut);
-        assert_eq!(shortcut.name(), &Some("Blank name".to_string()));
+
+        let shortcut = lnk::ShellLink::open(TEST_FILE_NAME, encoding.encoding()).unwrap();
+        //println!("{:#?}", shortcut);
+        assert_eq!(
+            shortcut.string_data().name_string(),
+            &Some("Blank name".to_string())
+        );
     }
 
     info!("Cleaning up...");
