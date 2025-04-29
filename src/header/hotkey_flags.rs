@@ -1,6 +1,5 @@
 use binrw::binrw;
 use bitflags::bitflags;
-use num_derive::FromPrimitive;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
@@ -48,7 +47,7 @@ impl HotkeyFlags {
 }
 
 #[allow(missing_docs)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, FromPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[binrw]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 /// An 8-bit unsigned integer that specifies a virtual key code that corresponds to a key on the

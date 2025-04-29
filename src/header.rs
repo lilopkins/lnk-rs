@@ -1,7 +1,6 @@
 use binrw::BinRead;
 use binrw::BinWrite;
 use getset::{Getters, MutGetters, Setters};
-use num_derive::FromPrimitive;
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
@@ -122,7 +121,7 @@ impl Default for ShellLinkHeader {
 }
 
 /// The expected window state of an application launched by the link.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, FromPrimitive, BinRead, BinWrite)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, BinRead, BinWrite)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[brw(repr=u32)]
 pub enum ShowCommand {

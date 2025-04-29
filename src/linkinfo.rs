@@ -4,7 +4,6 @@ use binrw::BinRead;
 use bitflags::bitflags;
 use encoding_rs::Encoding;
 use getset::Getters;
-use num_derive::{FromPrimitive, ToPrimitive};
 
 use crate::{
     binread_flags::binread_flags,
@@ -410,7 +409,7 @@ impl From<VolumeID> for Vec<u8> {
 }
 
 /// A 32-bit, unsigned integer that specifies the type of drive the link target is stored on.
-#[derive(Clone, Debug, FromPrimitive, ToPrimitive, BinRead)]
+#[derive(Clone, Debug, BinRead)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[br(repr(u32))]
 pub enum DriveType {
@@ -601,7 +600,7 @@ impl CommonNetworkRelativeLinkFlags {
 /// A 32-bit, unsigned integer that specifies the type of network provider.
 /// <https://learn.microsoft.com/de-de/windows/win32/api/winbase/ns-winbase-file_remote_protocol_info>
 #[allow(missing_docs)]
-#[derive(Clone, Debug, FromPrimitive, ToPrimitive, BinRead)]
+#[derive(Clone, Debug, BinRead)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[br(repr(u32))]
 pub enum NetworkProviderType {
