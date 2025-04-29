@@ -83,7 +83,7 @@ pub fn write_sized_string(
 
         let encoding = StringEncoding::from(link_flags, encoding);
         match encoding {
-            StringEncoding::CodePage(cp) => cp.encode(&s).0.write(writer)?,
+            StringEncoding::CodePage(cp) => cp.encode(s).0.write(writer)?,
             StringEncoding::Unicode => {
                 let v: Vec<_> = s.encode_utf16().collect();
                 v.write_le(writer)?
