@@ -12,7 +12,7 @@ jobs:
       matrix:
         checks:
           - name: Code
-            command: check --locked
+            command: check
           - name: Formatting
             component: rustfmt
             command: fmt --check
