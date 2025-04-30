@@ -1,5 +1,8 @@
-use binrw::binrw;
+use binrw::{binrw, BinRead, BinResult, BinWrite, Endian};
 use bitflags::bitflags;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
+use std::io::{Read, Seek};
 
 #[cfg(feature = "serde")]
 use serde::Serialize;
@@ -47,12 +50,10 @@ impl HotkeyFlags {
 }
 
 #[allow(missing_docs)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[binrw]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, FromPrimitive, BinWrite)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 /// An 8-bit unsigned integer that specifies a virtual key code that corresponds to a key on the
 /// keyboard.
-#[br(repr = u8)]
 #[bw(repr = u8)]
 pub enum HotkeyKey {
     NoKeyAssigned = 0x00,
@@ -118,6 +119,20 @@ pub enum HotkeyKey {
     F24,
     NumLock = 0x90,
     ScrollLock,
+}
+
+// Custom BinRead implementation to catch invalid hotkey key from bad generated shortcuts
+impl BinRead for HotkeyKey {
+    type Args<'a> = ();
+
+    fn read_options<R: Read + Seek>(
+        reader: &mut R,
+        options: Endian,
+        _: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let value = u8::read_options(reader, options, ())?;
+        Ok(HotkeyKey::from_u8(value).unwrap_or(HotkeyKey::NoKeyAssigned))
+    }
 }
 
 bitflags! {

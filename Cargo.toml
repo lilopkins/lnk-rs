@@ -1,6 +1,6 @@
 [package]
 name = "lnk"
-version = "0.6.0"
+version = "0.6.1"
 authors = [
     "Lily Hopkins <lily@hpkns.uk>",
     "Simon Buchan <simon.buchan.nz@gmail.com>",
@@ -55,6 +55,8 @@ clio = { version = "0.3", features = ["clap-parse"], optional = true }
 anyhow = { version = "1.0", optional = true }
 
 stability = {version = "0.2.1", optional = true }
+num-traits = "0.2.19"
+num-derive = "0.4.2"
 
 [dev-dependencies]
 pretty_env_logger = "0.5.0"
