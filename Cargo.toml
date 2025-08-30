@@ -13,7 +13,7 @@ repository = "https://github.com/lilopkins/lnk-rs"
 
 [features]
 default = ["serde"]
-binwrite = [ "stability" ]
+binwrite = [ "dep:stability" ]
 unstable-save = []
 serde = ["dep:serde", "dep:serde_json", "bitflags/serde"]
 lnk2json = ["serde", "dep:clap", "dep:simplelog", "dep:clap-verbosity-flag", "dep:clio", "dep:anyhow"]
@@ -37,7 +37,7 @@ required-features = ["binwrite"]
 log = "0.4.11"
 bitflags = "2.9"
 chrono = "0.4.23"
-binrw = "0.14"
+binrw = "0.15"
 getset = "0.1"
 thiserror = "2.0"
 encoding_rs = "0.8"
@@ -54,7 +54,7 @@ clap-verbosity-flag = { version = "3.0.2", optional = true }
 clio = { version = "0.3", features = ["clap-parse"], optional = true }
 anyhow = { version = "1.0", optional = true }
 
-stability = {version = "0.2.1", optional = true }
+stability = { version = "0.2.1", optional = true }
 num-traits = "0.2.19"
 num-derive = "0.4.2"
 
