@@ -334,11 +334,11 @@ impl LinkInfoFlags {
 /// resolving the link if the file is not found in its original location.
 #[derive(Clone, Debug, BinRead, Getters)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
-#[get(get = "pub")]
+#[getset(get = "pub")]
 #[allow(unused)]
 #[br(import(default_codepage: &'static Encoding))]
 pub struct VolumeID {
-    #[get(skip)]
+    #[getset(skip)]
     #[cfg_attr(feature = "serde", serde(skip))]
     start_offset: CurrentOffset,
     /// VolumeIDSize (4 bytes): A 32-bit, unsigned integer that specifies the
@@ -392,6 +392,7 @@ pub struct VolumeID {
     volume_label: String,
 
     #[cfg_attr(feature = "serde", serde(skip))]
+    #[getset(skip)]
     _next_offset: CurrentOffset,
 }
 

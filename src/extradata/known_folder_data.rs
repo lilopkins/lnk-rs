@@ -13,7 +13,7 @@ use crate::Guid;
 #[derive(Clone, Copy, Debug, BinRead, Getters)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[br(import(block_size: u32), pre_assert(block_size == 0x0000_0001C))]
-#[get(get = "pub")]
+#[getset(get = "pub")]
 #[allow(unused)]
 pub struct KnownFolderDataBlock {
     /// A value in GUID packet representation ([MS-DTYP] section

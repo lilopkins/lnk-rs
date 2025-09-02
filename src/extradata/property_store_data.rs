@@ -13,7 +13,7 @@ use getset::Getters;
 #[derive(Clone, BinRead, Getters)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[br(import(block_size: u32), pre_assert(block_size >= 0x0000_000C))]
-#[get(get = "pub")]
+#[getset(get = "pub")]
 #[allow(unused)]
 pub struct PropertyStoreDataBlock {
     /// A serialized property storage structure ([MS-PROPSTORE] section 2.2).
