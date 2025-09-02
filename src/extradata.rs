@@ -2,6 +2,7 @@ use std::io::ErrorKind;
 
 use binrw::{BinRead, BinReaderExt};
 use encoding_rs::Encoding;
+use getset::Getters;
 #[allow(unused)]
 use log::{debug, error, info, trace, warn};
 
@@ -80,7 +81,7 @@ pub mod vista_and_above_id_list_data;
 /// data section that is appended to the basic Shell Link Binary File Format.
 ///
 /// At the moment, ExtraData can only be read, not written to shortcuts
-mod shell_item_identifiers;
+pub mod shell_item_identifiers;
 
 #[allow(missing_docs)]
 #[derive(Clone, Debug, BinRead)]
@@ -113,10 +114,12 @@ pub enum ExtraDataBlock {
     ShellItemIdentifiers(#[br(args(_block_size))] ShellItemIdentifiers),
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Getters)]
 #[allow(missing_docs, unused)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
+#[getset(get = "pub")]
 pub struct ExtraData {
+    /// The blocks of external data within the shortcut.
     blocks: Vec<ExtraDataBlock>,
 }
 
