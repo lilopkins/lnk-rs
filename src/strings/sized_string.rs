@@ -15,7 +15,7 @@ pub fn parse_sized_string(
     encoding: &'static Encoding,
 ) -> BinResult<Option<String>> {
     if link_flags.contains(expected_flag) {
-        log::info!("reading string at {}", reader.stream_position()?);
+        log::trace!("reading string at {}", reader.stream_position()?);
         let count_characters: u16 = reader.read_le()?;
         trace!(
             "reading sized string of size '{count_characters}' at 0x{:08x}",
@@ -24,7 +24,7 @@ pub fn parse_sized_string(
 
         let encoding = StringEncoding::from(link_flags, encoding);
 
-        log::info!("characters: {count_characters}");
+        log::trace!("characters: {count_characters}");
 
         match encoding {
             StringEncoding::CodePage(default_encoding) => {
