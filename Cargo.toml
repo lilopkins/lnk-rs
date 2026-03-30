@@ -1,6 +1,6 @@
 [package]
 name = "lnk"
-version = "0.6.3"
+version = "0.6.4"
 authors = [
     "Lily Hopkins <lily@hpkns.uk>",
     "Simon Buchan <simon.buchan.nz@gmail.com>",
