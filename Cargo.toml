@@ -10,6 +10,7 @@ edition = "2021"
 description = "A Rust library to parse and write Windows shortcut files (.lnk)"
 license = "MIT"
 repository = "https://github.com/lilopkins/lnk-rs"
+rust-version = "1.85"
 
 [features]
 default = ["serde"]
