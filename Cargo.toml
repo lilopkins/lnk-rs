@@ -1,6 +1,6 @@
 [package]
 name = "lnk"
-version = "0.6.3"
+version = "0.6.4"
 authors = [
     "Lily Hopkins <lily@hpkns.uk>",
     "Simon Buchan <simon.buchan.nz@gmail.com>",
@@ -10,6 +10,7 @@ edition = "2021"
 description = "A Rust library to parse and write Windows shortcut files (.lnk)"
 license = "MIT"
 repository = "https://github.com/lilopkins/lnk-rs"
+rust-version = "1.85"
 
 [features]
 default = ["serde"]
